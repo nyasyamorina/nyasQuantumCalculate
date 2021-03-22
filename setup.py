@@ -8,9 +8,8 @@ setup(
     author = "nyasyamorina",
     author_email = "1275935966@qq.com",
     description = "A Simple Quantum Calculation Simulate Packge",
-    # TODO
-    url = "",
-    packages=["nyasQuantumCalculate"],
+    url = "https://github.com/nyasyamorina/nyasQuantumCalculate",
+    packages = ["nyasQuantumCalculate"],
 )
 
 site_paths = [path for path in sys.path
