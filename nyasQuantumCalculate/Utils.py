@@ -5,13 +5,13 @@ have_matplotlib: bool = True
 try:
     from matplotlib import pyplot as plt
 except ModuleNotFoundError:
-    hava_matplotlib = False
+    have_matplotlib = False
 
 from .cy.nyasQC import convert_number, convert_states, ColorWheel2RGB, \
         SingleQubit, MultiQubits
 
 
-__all__ = ["convert_number", "convert_states",
+__all__ = ["convert_number", "convert_states", "have_matplotlib",
            "ColorWheel2RGB", "DumpMachineText", "DumpMachineFig"]
 
 

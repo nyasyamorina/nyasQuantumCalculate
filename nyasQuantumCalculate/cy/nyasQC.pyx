@@ -757,7 +757,6 @@ def ColorWheel2RGB(float32 theta, bint is01):
     cdef float32 theta_ = <float32>fmod(theta, PI2)
     if theta < 0.:
         theta_ += <float32>PI2
-    theta_ = <float32>PI2 - theta_
     cdef float32 h_pi_3 = <float32>(3. * theta_ / M_PI)
     cdef float32 R = color_f(2, h_pi_3)
     cdef float32 G = color_f(0, h_pi_3)

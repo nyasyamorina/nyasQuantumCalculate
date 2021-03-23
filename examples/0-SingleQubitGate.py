@@ -1,10 +1,11 @@
-import upper_path
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from nyasQuantumCalculate import *
 from nyasQuantumCalculate import Gates
 from nyasQuantumCalculate import Utils
 
-print(dir())
 
 
 qubit = SingleQubit()

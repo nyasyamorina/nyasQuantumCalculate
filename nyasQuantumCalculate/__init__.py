@@ -1,7 +1,7 @@
 try:
     from .cy.nyasQC import Options, TempOption, TemporaryOptions, QuantumObject, \
         Qubit, QuantumOperation, SingleQubitOperation, SingleQubit, \
-        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll
+        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll, ApplyToEach
 
 
 except ModuleNotFoundError:
@@ -11,12 +11,12 @@ except ModuleNotFoundError:
 
     from .cy.nyasQC import Options, TempOption, TemporaryOptions, QuantumObject, \
         Qubit, QuantumOperation, SingleQubitOperation, SingleQubit, \
-        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll
+        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll, ApplyToEach
 
 
 __all__ = ["Options", "QuantumObject", "Qubit", "QuantumOperation", "SingleQubitOperation",
            "SingleQubit", "SingleQubitGate", "MultiQubits", "QubitIndex", "M", "MeasureAll",
-           "TempOption", "TemporaryOptions", "Reset"]
+           "TempOption", "TemporaryOptions", "Reset", "ApplyToEach"]
 
 
 def M(qubit: Qubit) -> bool:

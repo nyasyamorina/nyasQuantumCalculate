@@ -1,8 +1,6 @@
 from cmath import sqrt, exp, pi, sin, cos
 from typing import Tuple
 
-from numpy import arccos
-
 from nyasQuantumCalculate import M, Reset
 from nyasQuantumCalculate import Utils
 from nyasQuantumCalculate.cy.nyasQC import *
@@ -231,17 +229,19 @@ xCoord, yCoord = np.meshgrid(coord1D, coord1D)
 
 im = np.ones((figSize, figSize, 3), np.uint8) * backgroundColor
 
-def _renderProcess(x: float, y: float) -> None:
+def renderProcess(x: float, y: float) -> None:
     rr = x * x + y * y
     if 0.4 <= rr <= 0.9:
         theta = convert_number(x + 1j * y)[1]
         color = np.array(ColorWheel2RGB(theta, False), dtype=np.uint8)
-        alpha = 1. - np.clip(30.0 * abs(rr - 0.65) - 6.5, 0., 1.)
+        alpha = float(1. - np.clip(30.0 * abs(rr - 0.65) - 6.5, 0., 1.))
         color = color * alpha + backgroundColor * (1. - alpha)
         color = np.clip(color, 0., 255.)
-        im[int((y+1) * figSize / 2), int((x+1) * figSize / 2)] = color
+        figX = (x + 1) * figSize / 2
+        figY = figSize - (y + 1) * figSize / 2
+        im[int(figY), int(figX)] = color
 
-np.vectorize(_renderProcess)(xCoord, yCoord)
+np.vectorize(renderProcess)(xCoord, yCoord)
 
 if have_cv2:
     cv2.imwrite(saveFile, im[..., ::-1])

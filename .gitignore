@@ -2,4 +2,8 @@ test_manim.py
 .vscode
 build
 nyasQuantumCalculate/cy/nyasQC.cp39-win_amd64.pyd
+nyasQuantumCalculate/cy/nyasQC.c
 ColorWheel.png
+nyasQuantumCalculate/__pycache__
+examples/__pycache__
+temp.win-amd64-3.9/
