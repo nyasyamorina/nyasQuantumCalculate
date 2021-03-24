@@ -32,11 +32,12 @@ print(result)           # False or True
 
 *   安装到python  (all python version)
 
-    1.  确保环境里有合适的C编译器, 如`vs`, `mingw`
-    2.  使用 `python -m pip install cython` 安装Cython
-    3.  下载这个仓库
-    4.  在终端运行 `python setup.py install`
-    5.  在终端运行 `python -c "import nyasQuantumCalculate"`
+    1.  下载这个仓库
+    2.  如果已有可用的 `nyasQC.*.pyd` 跳至 **5.**
+    3.  确保环境里有合适的C编译器, 如`vs`, `mingw`
+    4.  使用 `python -m pip install cython` 安装Cython
+    5.  在终端运行 `python setup.py install`
+    6.  在终端运行 `python -c "import nyasQuantumCalculate"`
     7.  没有错误发生即代表成功
 
 **如发生错误可以参考最下面的 FAQ**
