@@ -139,7 +139,7 @@ class Even1BitsQ(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
         pass
     def __call__(self, qubits: MultiQubits) -> None:
-        ApplyToEach(Gates.Z, qubits)
+        Gates.ApplyToEach(Gates.Z, qubits)
 
 
 #################  算法本体
@@ -151,7 +151,7 @@ def DeutscheJozsaQuantum(totalBits: int,
     Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
         else Utils.DumpMachineText(qubits)
 
-    ApplyToEach(Gates.H, qubits)
+    Gates.ApplyToEach(Gates.H, qubits)
     Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
         else Utils.DumpMachineText(qubits)
 
@@ -159,7 +159,7 @@ def DeutscheJozsaQuantum(totalBits: int,
     Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
         else Utils.DumpMachineText(qubits)
 
-    ApplyToEach(Gates.H, qubits)
+    Gates.ApplyToEach(Gates.H, qubits)
     Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
         else Utils.DumpMachineText(qubits)
 
@@ -167,5 +167,10 @@ def DeutscheJozsaQuantum(totalBits: int,
     qubits.resetAll()
     return not any(result)
 
-print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, Even1BitsQ(3))}")
+print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, Constant1Q(3))}")
 # 可以自己尝试调一下数据试着运行
+
+
+#######################  强烈注意
+# 在原本的 Deutsche Jozsa 算法里是需要引入额外的一个量子位作为纠缠
+# 不过其实yysy, 我也不知道额外的量子位有什么作用

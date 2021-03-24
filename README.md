@@ -24,12 +24,20 @@ print(result)           # False or True
 
 *   others
 
-    1.  确保环境里有合适的C编译器, 如`vs`, `mingw`, 等
+    1.  确保环境里有合适的C编译器, 如`vs`, `mingw`
+    2.  使用 `python -m pip install cython` 安装Cython
+    3.  编译`pyx`文件: `python ".\nyasQuantumCalculate\cy\setupNyasQC.py build_ext --inplace"`
+    6.  在终端运行 `python -c "import nyasQuantumCalculate"`
+    7.  没有错误发生即代表成功
+
+*   安装到python  (all python version)
+
+    1.  确保环境里有合适的C编译器, 如`vs`, `mingw`
     2.  使用 `python -m pip install cython` 安装Cython
     3.  下载这个仓库
-    4.  在终端运行 `python -c "import nyasQuantumCalculate"`
-    5.  Cython应该会自行编译文件
-    6.  没有错误发生即代表成功
+    4.  在终端运行 `python setup.py install`
+    5.  在终端运行 `python -c "import nyasQuantumCalculate"`
+    7.  没有错误发生即代表成功
 
 **如发生错误可以参考最下面的 FAQ**
 
@@ -50,7 +58,7 @@ print(result)           # False or True
     *   自带一些常用的单量子位门 `I`, `H`, `X`, `Y`, `Z`, `S`, `T`
     *   使用 `Rx(float)`, `Ry(float)`, `Rz(float)`, `R1(float)` 可以获取旋转门
     *   量子位门可以通过 `__call__` 方法作用在量子位上.
-    *   对于更复杂的位门, 在提供了`MultiQubits`里提供了 `control` 方法, 并且内置一个双量子位门 `CNOT`, 已知只有 `Rotation Gates` 和 `CNOT` 的量子计算系统的 *完备* 的
+    *   对于更复杂的位门, 提供了 `Control` 方法, 并且内置一个双量子位门 `CNOT`, 已知只有 `Rotation Gates` 和 `CNOT` 的量子计算系统的 *完备* 的
 
 3.  测量系统
 
@@ -60,7 +68,7 @@ print(result)           # False or True
 4.  重置系统
 
     *   对于 `SingleQubit` 可以使用方法 `Reset` 到0状态
-    *   而 `MultiQubits` 需要内置方法 `resetAll` 重置全部量子位
+    *   而 `MultiQubits` 使用方法 `ResetAll` 重置全部量子位
     *   在程序退出前或清除量子位系统前重置系统是一个良好的习惯
 
 ---
@@ -73,11 +81,19 @@ print(result)           # False or True
 
 *   Cython安装不了怎么办呢 & 我不想安装Cython
 
-    可以在下方猛戳群号或私聊作者获取相应的c文件自行编译为pyd库
+    可以在下方猛戳群号或私聊作者获取相应的c文件自行编译为pyd文件
+
+*   `python -c "import nyasQuantumCalculate"` 运行失败
+
+    1.  如果没有把库安装到python里, 确保运行目录与 `nyasQuantumCalculate` 是同一级, 确保`nyasQuantumCalculate\cy\`下有 `nyasQC.*.pyd` , 如果没有, 可以参考`安装`.
+
+    2.  如果把库安装到了python里, 确保运行目录**不**与 `nyasQuantumCalculate` 同一级, 然后参考上面第一步, 但这是库的目录是在 `<你的python安装路径>\Lib\site-packages\nyasQuantumCalculate`
+
+    3.  如果问题仍然没解决可以猛戳下面群号寻求帮助
 
 *   为什么不把库放到pypi上呢
 
-    目前这个库还只是半成品. 并且pypi上可以安装qsharp等更好的库, ~~不想继续增加pip里面的垃圾了~~. 如果需要**安装**这个库到python里, 运行 `python setup.py install`
+    目前这个库还只是半成品. 并且pypi上可以安装qsharp等更好的库, ~~不想继续增加pip里面的垃圾了~~.
 
 *   为什么要把单个量子位系统做成单独的类呢 & 用多量子位系统模拟单个量子位可以吗
 
@@ -97,7 +113,7 @@ print(result)           # False or True
 
 *   语句 `s*gate` 其中s是数字, gate是`SingleQubitGate`, python解释为 `SingleQubitGate.__mul__(s, gate)`, 而不是 `SingleQubitGate.__rmul__(gate, s)`
 
-*   `setup` 并不会包含文件 `~\nyasQuantumCalculate\cy\nyaQC.*.pyd`, 这个库绝大部分逻辑都是在这个文件里实现的. 尽管 `setup.py` 是可以运作的, 但是打开文件内部可以看到只是把`pyd`复制过去而已
+*   `setup` 并不会包含文件 `~\nyasQuantumCalculate\cy\nyaQC.*.pyd`, 这个库绝大部分逻辑都是在这个文件里实现的. 尽管 `setup.py` 是可以运作的, 但是打开`setup.py`内部可以看到只是把`pyd`复制过去而已
 
 上述问题真心向大家求助, 如果可以提供参考意见的话真的非常感谢
 
@@ -110,6 +126,6 @@ qq群 ~~瑟图群~~ : 274767696
 作者: **nyasyamorina** *[qq: 1275935966]* (加好友时请备注来意, 免得当作机器人了)
 
 
-特别感谢 **_hyl** 提供 `pyi` 文件的翻译, _hyl: `"如果发现翻译有错的话, 可以去找他商讨"` *[qq: 2738846947]*
+特别感谢 **_hyl** 提供 `pyi` 文件的翻译, _hyl: `"如果发现翻译有错的话, 可以去找我商讨"` *[qq: 2738846947]*
 
 还有非常感激广大群友提供技术支持

@@ -1,150 +1,155 @@
 from typing import NoReturn, List, Tuple, Iterable, Union, Any
 
-
 class _option:
-    """ control some behavior\n
-    Using Options.xxx to trun on or off the features given below.\n
-    e.g. Gain current states by using 'opt = Options.checkUnitGate',
-    'Options.checkUnitGate = False' is used to close it.\n
+    """ 控制一些行为\n
+    使用 Options.xxx 控制设置的开关\n
+    如 'opt = Options.autoCheckUnitGate' 获得目前状态,
+    'Options.autoCheckUnitGate = False' 关闭与autoCheckUnitGate相应的行为\n
     \n
-    Note: class _option should not be instantiated.\n
+    note: 这个类型不应该被实例化\nn
+    \nn
+    :option: autoNormalize [默认: True]\n
+    如果为true, 量子系统会在通过operation之后或被测量之前进行归一化.
+    设置为false可以加快运行速度.\n
     \n
-    :option: autoNormalize [efault: True]\n
-    If true, quantum system will be normalized after operation or before
-    measurement. Setting it to false can acclerate running speed.\n
-    \n
-    :option: checkUnitGate [default: True]\n
-    If ture, when built or modified gate (multiplied by scalars or two gates are
-    multiplied), gates will be checked automatically whether they are coincident
-    with quantum gates (i.e. unitary matrix). Setting it to false can acclerate
-    running speed, but it is still calculated when SingleQubitGate.isUnitary is
-    called. SingleQubitGate.isUnitary will be stored after calculation is
-    complete, used until the gates are modified again.\n
+    :option: autoCheckUnitGate [默认: True]\n
+    如果为true, 在构建门或修改门(乘上常数或两门相乘)时, 会自动计算门n
+    是否符合量子门(即酉矩阵).\n
+    设置为false可以加快运行速度, 但调用SingleQubitGate.isUnitary时仍会计算,
+    该属性(SingleQubitGate.isUnitary)在计算完后会被储存起来, 直到下次修改门\n
     \n
     :option: ignoreWarning [default: False]\n
-    At present, warn will be thrown out, when the quantum system that having
-    more than 14 qubits is built.\n
+    目前只有构建 qubits >= 14 的量子系统会发出警告\n
     \n
-    :option: checkQubitIdx [default: True]\n
-    If true, control bits will be checked whether out of range before doing
-    qubit-wise oeration on MultiQubits. Setting it to false may cause program
-    crashes due to out of range, unless you know what are you doing!
+    :option: checkQubitIndex [default: True]\n
+    如果为true, 在进行MultiQubits的量子位操作前判断操作位是否越界
+    设置为False可能会因为越界引起程序的崩溃, 除非明白自己在做什么!
+    \n
+    :option: checkInSameSystem [default: True]\n
+    如果为true, 在进行QubitIndex的操作前判断多个qubit是否在同一个系统
+    设置为False可能会无法计算正确的结果, 除非明白自己在做什么!
     """
     autoNormalize: bool = True
-    checkUnitGate: bool = True
+    autoCheckUnitGate: bool = True
     ignoreWarning: bool = False
-    checkQubitIdx: bool = True
+    checkQubitIndex: bool = True
+    checkInSameSystem: bool = True
 
 
 class TempOption:
-    """ Control option objects used with 'with' temporarily.\n
-    \n
-    Note: This class should not be instantiated by user."""
+    """ 配合with语句暂时控制option的对象
+
+    note: 这个类型不应该由用户实例化 """
     def __init__(self, option_pointer: Any,
                  after: bool, check: Any) -> None: pass
-
     def __enter__(self) -> None: pass
-    def __exit__(self, exc_type: Any, exc_value: Any,
-                 traceback: Any) -> None: pass
+    def __exit__(self, exc_type: Any,
+                 exc_value: Any, traceback: Any) -> None: pass
 
 
 class _temp_options:
-    """ Control option objects used with 'with' temporarily.\n
-    e.g. '''\n
+    """ 暂时地控制一些语句 (通过'with'实现)\n
+    例子: '''\n
     with TemporaryOptions.autoNormalize(False):\n
         # block1 '''\n
-    You can set the autoNormalize to False in the block1, it will reset the
-    settigns as before, when going to exit code block.\n
+    可以在block1里设置 autoNormalize 为False, 退出代码块时自动恢复之前的设置\n
     \n
-    Note:This class should not be instantiated.
+    note: 这个类型不应该被实例化
     """
     def autoNormalize(self, after: bool) -> TempOption: pass
-    def checkUnitGate(self, after: bool) -> TempOption: pass
+    def autoCheckUnitGate(self, after: bool) -> TempOption: pass
     def ignoreWarning(self, after: bool) -> TempOption: pass
-    def checkQubitIdx(self, after: bool) -> TempOption: pass
+    def checkQubitIndex(self, after: bool) -> TempOption: pass
+    def checkInSameSystem(self, after: bool) -> TempOption: pass
 
 
 class QuantumObject:
-    """An interface class, you should not instantiate it."""
+    """一个接口类型, 你不应该实例化这个类型"""
     pass
 
 
 class Qubit(QuantumObject):
-    """An interface class, you should not instantiate it."""
+    """一个接口类型, 你不应该实例化这个类型"""
     def apply(self, gate: "SingleQubitGate") -> None: pass
     def measure(self) -> bool: pass
 
 
+class Qubits(QuantumObject):
+    """一个接口类型, 你不应该实例化这个类型"""
+    def measure(self, idx: int) -> bool: pass
+    def measureAll(self) -> Tuple[bool]: pass
+    def reset(self, idx: int) -> bool: pass
+    def resetAll(self) -> bool: pass
+    def applyTo(self, opr: SingleQubitOperation, idx: int) -> None: pass
+    def applyToEach(self, opr: SingleQubitOperation) -> None: pass
+
+
 class QuantumOperation:
-    """An interface class, you should not instantiate it."""
+    """一个接口类型, 你不应该实例化这个类型"""
     pass
 
 
 class SingleQubitOperation(QuantumOperation):
-    """An interface class, you should not instantiate it."""
+    """一个接口类型, 你不应该实例化这个类型"""
     def __call__(self, q: Qubit) -> None: pass
 
 
 class SingleQubitGate(SingleQubitOperation):
-    """ A gate can operate a single qubit.\n
+    """一个作用在单个量子位上的门\n
     SingleQubitGate(complex, complex, complex, complex)\n
     \n
-    If Options.checkUnitGate is true, after initialized or modified, gate
-    will be checked automatically whether it is coincident with quantum gates.\n
+    如果 Options.autoCheckUnitGate 为true, 则会在初始化或修改门后自动计算门
+    是否符合量子门\n
     \n
-    Multiplication: This gate supports scalar multiplication and matrix
-    multiplication as matrix.\n
-    Support 'gate *= s' and 'new_gate = gate * s' where s is complex number.\n
-    'new_gate = gateL @ gateR', which same as maths definition.\n
-    Note: 'new_gate = s * gate' are not supported,
-    see SingleQubitGate.__rmul__.\n
+    乘法: 门就像矩阵一样支持数乘和矩阵乘法\n
+    支持 'gate *= s' 和 'new_gate = gate * s', 其中s是复数\n
+    'new_gate = gateL @ gateR' 矩阵乘法与数学定义一样\n
+    note: 'new_gate = s * gate' 是不支持的, 见SingleQubitGate.__rmul__\n
     \n
-    qb.apply(gate) can be substituted for gate(qb).\n
+    可以使用 'gate(qb)' 代替语句 'qb.apply(gate)'\n
     \n
-    Built-in gates: I, H, X, Y, Z, S, T, Rx*, Ry*, Rz*, R1*\n
-    *Note: Rotation gate is implemented as a function, not an object.\n
+    内置的gates: I, H, X, Y, Z, S, T, Rx*, Ry*, Rz*, R1*\n
+    *note: 旋转门是以函数实现的, 而不是对象\n
     \n
     :property: isUnitary\n
-    Return true when the matrix of this gate is unitary,
-    otherwise return false.\n
+    如果门是量子门, 返回true, 否则返回false\n
     \n
     :property: matrix  ((a, b), (c, d))\n
-    Return the matrix of this gate (complex number).
+    返回这个门的复矩阵
     """
     isUnitary: bool = False
     matrix: Tuple[Tuple[complex, complex], Tuple[complex, complex]] = \
             ((1.+0.j, 0.+0.j), (0.+0.j, 1.+0.j))
 
     def __init__(self, a: complex, b: complex, c: complex, d: complex) -> None:
-        """The shape of gate is [[a b] [c d]], which is coincident with
-        maths difinition"""
+        """gate的形状为 [[a b] [c d]], 与数学定义相符"""
         pass
 
     def __imul__(self, s: complex) -> SingleQubitGate: pass
     def __mul__(self, s: complex) -> SingleQubitGate: pass
     def __matmul__(self, gateR: SingleQubitGate) -> SingleQubitGate: pass
 
+
     def __rmul__(self, s: complex) -> NoReturn:
-        """For unknown reasons, python will interpret 'new_gate = s * gate'
-        (where s is complex) as 'new_gate = SingleQubitGate.__mul__(s, gate)',
-        which is clearly incorrect."""
+        """由于未知的原因, python把语句 'new_gate = s * gate'(s是复数)
+        解释为 'new_gate = SingleQubitGate.__mul__(s, gate)', 这明显是错误的"""
         raise RuntimeError
 
 
 class SingleQubit(Qubit):
-    """A single qubit\n
+    """单个量子位\n
     SingleQubit()\n
     \n
-    Automatically allocated default states when instantiating:
+    当实例化时会自动分配默认状态:
     ∣0❭: 1.0; ∣1❭: 0.0\n
     \n
     :property: states  (('∣0❭',), ('∣1❭',))\n
-    Return a tuple with current state (complex number)\n
+    返回一个元组包含目前的状态 (复数)\n
     \n
     :method: normalize\n
     :method: reset\n
     :method: apply\n
-    :method: measure
+    :method: measure\n
     """
     states: Tuple[Tuple[complex], Tuple[complex]] = ((1.+0.j,), (0.+0.j,))
 
@@ -155,116 +160,117 @@ class SingleQubit(Qubit):
         pass
 
     def reset(self) -> None:
-        """Reset qubit to 0 state.\n
-        Note: the angle of ∣0❭ will not be reset."""
+        """重置量子位到0状态.\n
+        note: ∣0❭ 的辐角不会被重置."""
         pass
 
     def apply(self, opr: SingleQubitOperation) -> None:
-        """Operate qubit. If Options.autoNormalize is true, the qubit which is
-        being operated will be normalized after operation.\n
-        Note: Only support type is SingleQubitGate's operation at present."""
+        """把opr作用在量子位上. 如果 Options.autoNormalize 为true,
+        操作后会归一化.\n
+        note: 目前只支持类型为SingleQubitGate的操作"""
         pass
 
     def measure(self) -> bool:
-        """Measure qubit, the states of qubit will collapse after measurement.
-        Return False if measure result is 0, otherwise return True.\n
-        If Options.autoNormalize is true, system will be normailized before
-        measurement."""
+        """测量这个量子位, 测量后量子位的状态会坍缩.\n
+        如果测量结果为0, 则返回false, 否则为true\n
+        如果 Options.autoNormalize 为true, 测量前会进行归一化"""
         pass
 
 
-class MultiQubits(QuantumObject):
-    """Multiple qubits system.\n
+class MultiQubits(Qubits):
+    """多量子位系统\n
     MultiQubits(int)\n
     \n
-    Storing all possible states of qubits system,
-    used to simulate quantums' behavior.\n
-    Note: In order to store quantums' states, 2^(n+4) bytes memory space is
-    needed, similarly 2^(n+4) bytes memory space is also needed for
-    calculation.\n
+    储存了qubits system所有可能的状态, 用于模拟量子行为.\n
+    note: 为了模拟量子行为, 需要2^(n+4) bytes内存储存,
+    同样需要2^(n+4) bytes内存运算.\n
     \n
-    :property: states  (..., (∣x❭,), ...) # total 2^n states\n
-    Return a tuple with current state (complex number)\n
+    :property: states  (..., (|x>,), ...) # 总共2^n个状态\n
+    返回一个元组包含目前的状态 (复数)\n
     \n
     :property: nQubits\n
-    Return a number shows how many qubits in this system\n
+    返回一个整数代表系统内有多少量子位\n
     \n
     :method: normalize\n
     :method: resetAll\n
     :method: applyTo\n
     :method: measure\n
     :method: control\n
-    :method: getQubit
+    :method: getQubit\n
     """
     states: Tuple[Tuple[complex], ...] = \
             ((1. + 0.j,), (0. + 0.j,), (0. + 0.j,), (0. + 0.j,))
     nQubits: int = 2
 
     def __init__(self, n: int) -> None:
-        """n is the number of qubit you want to simulate. Because of type
-        limited, maximum number of qubits is 63.\n
-        When n = 14, 2GiB of permanent memory and 4GiB of instantaneous memory\n
-        are required to meet the simulation requirements.\n
+        """n是模拟的量子位的数量. 因为类型限制, 最多只支持63个.\n
+        在n=14时, 就需要常驻2GiB内存, 和瞬时4GiB内存去满足模拟需求.\n
         \n
-        errors: ValueError, MemoryErro"""
+        errors: ValueError, MemoryError"""
         pass
 
     def normalize(self) -> None:
         pass
 
     def resetAll(self) -> None:
-        """Reset all system to 0 state\n
-        Note: the angle of ∣0❭ will not be reseted."""
+        """重置整个系统到0状态\n
+        note: ∣0❭ 的辐角不会被重置."""
         pass
 
     def applyTo(self, opr: SingleQubitOperation, idx: int) -> None:
-        """Operate the idx-th qubit. If Options.autoNormalize is true,
-        the qubit which is being operated will be normalized after operation.\n
-        Note: Only support type is SingleQubitGate's operation at present.\n
+        """把opr作用在第idx量子位上. 如果 Options.autoNormalize 为true,
+        操作后会对系统归一化.\n
+        note: 目前只支持类型为SingleQubitGate的操作\n
         \n
         errors: IndexError, MemoryError"""
         pass
 
+    def applyToEach(self, opr: SingleQubitOperation) -> None:
+        """把opr作用在所有量子位上. 如果 Options.autoNormalize 为true,
+        操作后会对系统归一化.\n
+        \n
+        errors: MemoryError"""
+        pass
+
     def measure(self, idx: int) -> bool:
-        """Measure the idx-th qubit, the states of qubit will
-        collapse after measurement.\n
-        Return False if measure result is 0, otherwise return True.\n
-        If Options.autoNormalize is true, the system will be
-        normalized before measurement.\n
+        """测量第idx个量子位, 测量后量子位的状态会坍缩.\n
+        如果测量结果为0, 则返回false, 否则为true\n
+        如果 Options.autoNormalize 为true, 测量前会对系统归一化.\n
         \n
         errors: IndexError"""
         pass
 
-    def control(self, opr: SingleQubitOperation, intList: List[int], idx: int) -> \
+    def measureAll(self) -> Tuple[bool]:
+        """测量所有量子位, 并返回一个元组包含测量结果\n
+        如果 Options.autoNormalize 为true, 测量前会对系统归一化."""
+        pass
+
+    def control(self, gate: SingleQubitGate, intList: List[int], idx: int) -> \
                 None:
-        """When all of qubits indexed by intList are equal to 1,
-        the idx-th qubit will be operated.\n
-        Note: Only support type is SingleQubitGate's operation at present.\n
+        """当intList作为索引代表的量子位全部为1时, 会把opr作用在第idx个qubit上.\n
+        note: 目前只支持类型为SingleQubitGate的操作\n
         \n
         errors: IndexError, ValueError, TypeError, MemoryError"""
         pass
 
     def getQubit(self, idx: int) -> "QubitIndex":
-        """Return the idx-th qubit of the system, which you can also use
-        index or slice operation to obtain.\n
+        """返回这个系统里第idx个量子位, 也可以使用索引或切片操作获得:
         'qb = mutiQb[4]' and 'qbList = mutiQb[5:0:-2]'"""
         pass
 
     def __len__(self) -> int:
-        """Same as  :property: nQubits"""
+        """ the same as  :property: nQubits"""
         pass
 
-    def __getitem__(self, idx: slice) -> List["QubitIndex"]:
+    def __getitem__(self, idx: Union[int, slice]) -> Union["QubitIndex", \
+                                                           "MultiQubitIndex"]:
         """errors: IndexError, TypeError, RuntimeError"""
-        pass
-
-    def __getitem__(self, idx: int) -> "QubitIndex":
         pass
 
 
 class QubitIndex(Qubit):
-    """Represent the qubit of multiqubits system which is indexed by idx.\n
-    QubitIndex(int, MultiQubits)\n
+    """代表MultiQubits里索引为index的量子位\n
+    QubitIndex(MultiQubits, int)\n
     \n
     :property: index\n
     :property: system\n
@@ -275,68 +281,116 @@ class QubitIndex(Qubit):
     index: int = 0
     system: MultiQubits = None
 
-    def __init__(self, idx: int, sys: MultiQubits) -> None:
+    def __init__(self, sys: MultiQubits, idx: int) -> None:
         """errors: IndexError"""
         pass
 
     def apply(self, opr: SingleQubitOperation) -> None:
-        """Operate qubit. If Options.autoNormalize is true,
-        the qubit will be normalized after operation.\n
-        Note: Only support type is SingleQubitGate's operation at present.\n
+        """把opr作用量子位上. 如果 Options.autoNormalize 为true,
+        操作后会对系统归一化.\n
+        note: 目前只支持类型为SingleQubitGate的操作\n
         \n
-        errors: IndexError, MemoryError"""
+        errors: MemoryError"""
         pass
 
     def measure(self) -> bool:
-        """measure qubit, the states of qubit will collapse after measurement.\n
-        Return False if measure result is 0, otherwise return True.\n
-        If Options.autoNormalize is true, the system will be
-        normalized before measurement."""
+        """测量量子位, 测量后量子位的状态会坍缩
+        如果测量结果为0, 则返回false, 否则为true\n
+        如果 Options.autoNormalize 为true, 测量前会对系统归一化."""
+        pass
+
+
+class MultiQubitIndex(Qubits):
+    """代表多个MultiQubits里索引为index的量子位\n
+    MultiQubitIndex(MutiQubits, *[int])\n
+    \n
+    :method: asList"""
+    def __init__(self, sys: MultiQubits, *idxs: Union[int, QubitIndex]) -> \
+            None: pass
+
+    def asList(self) -> List[QubitIndex]:
+        """返回一个包含QubitIndex的列表"""
+        pass
+
+    def append(self, idx: Union[int, QubitIndex]) -> None:
+        """在里面增加一个index\n
+        \n
+        errors: IndexError, ValueError, TypeError"""
+        pass
+
+    def __len__(self) -> int: pass
+    def __getitem__(self, idxx: int) -> QubitIndex: pass
+    def __setitem__(self, idxx: int, idx: Union[int, QubitIndex]) -> None: pass
+
+    def applyTo(self, opr: SingleQubitOperation, idxx: int) -> None:
+        """把opr作用在内部列表第idxx个元素代表的量子位上
+        如果 Options.autoNormalize 为true, 操作后会对系统归一化.\n
+        \n
+        errors: IndexError, ValueError, TypeError, MemoryError"""
+        pass
+
+    def applyToEach(self, opr: SingleQubitOperation) -> None:
+        """把opr作用在内部列表所有量子位上. 如果 Options.autoNormalize 为true,
+        操作后会对系统归一化.\n
+        \n
+        errors: MemoryError"""
+        pass
+
+    def measure(self, idxx: int) -> bool:
+        """测量内部列表第idxx个元素代表的量子位, 测量后量子位的状态会坍缩.\n
+        如果测量结果为0, 则返回false, 否则为true\n
+        如果 Options.autoNormalize 为true, 测量前会对系统归一化.\n
+        \n
+        errors: IndexError, ValueError, TypeError"""
+        pass
+
+    def measureAll(self) -> Tuple[bool]:
+        """测量内部列表所有量子位, 并返回一个元组包含测量结果\n
+        如果 Options.autoNormalize 为true, 测量前会对系统归一化."""
         pass
 
 
 def convert_number(s: complex) -> Tuple[float, float]:
-    """Convert a complex number from 'a+bi' to 'L*e^(i*t)'\n
+    """ 把复数从'a+bi'形式转化为'L*e^(ti)'形式\n
     \n
     errors: TypeError"""
     pass
-
 
 def convert_states(states: Iterable[Iterable[complex]]) -> \
             Tuple[Tuple[float, float], ...]:
-    """Convert states from 'a+bi' to 'L*e^(i*t)'\n
-    \n
-    errors: TypeError"""
-    pass
-
-
-def ApplyToEach(opr: SingleQubitOperation, qubits: MultiQubits) -> None:
-    """Apply opr to each qubit in qubits.\n
-    Note: Only support type is SingleQubitGate's operation at present.\n
+    """ 把量子状态从'a+bi'形式转化为'L*e^(ti)'形式\n
     \n
     errors: TypeError"""
     pass
 
 
 def MeasureAll(qubits: MultiQubits) -> Tuple[bool]:
-    """Measure all qubit in system, and return a tuple of boolean\n
+    """ 测量qubits里所有量子位, 并返回一个元组包含测量结果\n
     \n
     errors: TypeError"""
     pass
 
 
 def ColorWheel2RGB(theta: float, is01: bool) -> \
-        Union[Tuple[float, float, float], Tuple[int, int, int]]:
-    """Simply get RGB color from HSV space (h = theta, s = 1, v = 1)\n
-    if 'is01' is true, then return floats ranging in [0., 1.],
-    otherwise, return integers ranging in [0, 255]"""
+            Union[Tuple[float, float, float], Tuple[int, int, int]]:
+    """ 从HSV空间里得到RGB颜色 (h = theta, s = 1, v = 1)\n
+    如果is01位true, 则返回范围为[0,1]的浮点数, 否则返回范围为[0,255]的整数"""
     pass
+
+
+def Control(gate: SingleQubitGate,
+            qbList: Union[MultiQubitIndex, List[QubitIndex]],
+            idx: QubitIndex) -> None:
+    """qbList代表的量子位全部为1时, 会把gate作用在第idx个qubit上.\n
+    \n
+    errors: IndexError, ValueError, TypeError, MemoryError"""
 
 
 def CNOT(q0: "QubitIndex", q1: "QubitIndex") -> None:
-    """Note: 'q0' and 'q1' should be in the same system.\n
-    'CNOT(qbs[0], qbs[1])' equal 'qbs.control(X, [0], 1)'"""
+    """note: 'q0' 和 'q1' 应该在同一个系统内
+    'CNOT(qbs[0], qbs[1])' 等价于 'qbs.control(X, [0], 1)'"""
     pass
+
 
 
 Options: _option = None

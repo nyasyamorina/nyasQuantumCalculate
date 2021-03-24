@@ -1,22 +1,14 @@
-try:
-    from .cy.nyasQC import Options, TempOption, TemporaryOptions, QuantumObject, \
-        Qubit, QuantumOperation, SingleQubitOperation, SingleQubit, \
-        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll, ApplyToEach
+from typing import Tuple
 
-
-except ModuleNotFoundError:
-    import pyximport
-    pyximport.install(build_dir="./", build_in_temp=False,
-                      inplace=True, language_level=3)
-
-    from .cy.nyasQC import Options, TempOption, TemporaryOptions, QuantumObject, \
-        Qubit, QuantumOperation, SingleQubitOperation, SingleQubit, \
-        SingleQubitGate, MultiQubits, QubitIndex, MeasureAll, ApplyToEach
+from .cy.nyasQC import Options, Qubits, TempOption, TemporaryOptions, QuantumObject, \
+    Qubit, QuantumOperation, SingleQubitOperation, SingleQubit, \
+    SingleQubitGate, MultiQubits, QubitIndex
 
 
 __all__ = ["Options", "QuantumObject", "Qubit", "QuantumOperation", "SingleQubitOperation",
-           "SingleQubit", "SingleQubitGate", "MultiQubits", "QubitIndex", "M", "MeasureAll",
-           "TempOption", "TemporaryOptions", "Reset", "ApplyToEach"]
+           "SingleQubit", "SingleQubitGate", "MultiQubits", "QubitIndex", "M",
+           "TempOption", "TemporaryOptions", "Reset", "MeasureAll", "Qubits",
+           "ResetAll"]
 
 
 def M(qubit: Qubit) -> bool:
@@ -25,5 +17,13 @@ def M(qubit: Qubit) -> bool:
     return qubit.measure()
 
 
-def Reset(qubit: SingleQubit) -> None:
+def Reset(qubit: Qubit) -> None:
     qubit.reset()
+
+
+def MeasureAll(qubits: Qubits) -> Tuple[bool]:
+    return qubits.measureAll()
+
+
+def ResetAll(qubits: Qubits) -> None:
+    qubits.resetAll()

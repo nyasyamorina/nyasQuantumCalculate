@@ -8,18 +8,21 @@ from nyasQuantumCalculate.cy.nyasQC import *
 
 ############################  Options  #########################################
 assert Options.autoNormalize == True
-assert Options.checkUnitGate == True
+assert Options.autoCheckUnitGate == True
 assert Options.ignoreWarning == False
-assert Options.checkQubitIdx == True
+assert Options.checkQubitIndex == True
+assert Options.checkInSameSystem == True
 
 Options.autoNormalize = False
-Options.checkUnitGate = False
+Options.autoCheckUnitGate = False
 Options.ignoreWarning = True
-Options.checkQubitIdx = False
+Options.checkQubitIndex = False
+Options.checkInSameSystem = False
 assert Options.autoNormalize == False
-assert Options.checkUnitGate == False
+assert Options.autoCheckUnitGate == False
 assert Options.ignoreWarning == True
-assert Options.checkQubitIdx == False
+assert Options.checkQubitIndex == False
+assert Options.checkInSameSystem == False
 
 #######################  TemporaryOptions  #####################################
 with TemporaryOptions.autoNormalize(True):
@@ -29,12 +32,12 @@ with TemporaryOptions.autoNormalize(True):
     assert Options.autoNormalize == True
 assert Options.autoNormalize == False
 
-with TemporaryOptions.checkUnitGate(True):
-    assert Options.checkUnitGate == True
-    with TemporaryOptions.checkUnitGate(False):
-        assert Options.checkUnitGate == False
-    assert Options.checkUnitGate == True
-assert Options.checkUnitGate == False
+with TemporaryOptions.autoCheckUnitGate(True):
+    assert Options.autoCheckUnitGate == True
+    with TemporaryOptions.autoCheckUnitGate(False):
+        assert Options.autoCheckUnitGate == False
+    assert Options.autoCheckUnitGate == True
+assert Options.autoCheckUnitGate == False
 
 with TemporaryOptions.ignoreWarning(False):
     assert Options.ignoreWarning == False
@@ -43,12 +46,19 @@ with TemporaryOptions.ignoreWarning(False):
     assert Options.ignoreWarning == False
 assert Options.ignoreWarning == True
 
-with TemporaryOptions.checkQubitIdx(True):
-    assert Options.checkQubitIdx == True
-    with TemporaryOptions.checkQubitIdx(False):
-        assert Options.checkQubitIdx == False
-    assert Options.checkQubitIdx == True
-assert Options.checkQubitIdx == False
+with TemporaryOptions.checkQubitIndex(True):
+    assert Options.checkQubitIndex == True
+    with TemporaryOptions.checkQubitIndex(False):
+        assert Options.checkQubitIndex == False
+    assert Options.checkQubitIndex == True
+assert Options.checkQubitIndex == False
+
+with TemporaryOptions.checkInSameSystem(True):
+    assert Options.checkInSameSystem == True
+    with TemporaryOptions.checkInSameSystem(False):
+        assert Options.checkInSameSystem == False
+    assert Options.checkInSameSystem == True
+assert Options.checkInSameSystem == False
 
 ################################################################################
 ################################################################################
@@ -150,14 +160,14 @@ CNOT(q[0], q[1])
 checkAllValue(q.states, ((rsqrt2,), (0.,), (0.,), (rsqrt2,)))
 Utils.DumpMachineText(q)
 q.resetAll()
-ApplyToEach(H, q)
+q.applyToEach(H)
 checkAllValue(q.states, ((.5,), (.5,), (.5,), (.5,)))
 Z(q.getQubit(1))
-ApplyToEach(H, q)
+q.applyToEach(H)
 assert q.measure(0) == False and M(q[1]) == True
-assert MeasureAll(q) == (False, True)
+assert q.measureAll() == (False, True)
 
-Options.checkQubitIdx = True
+Options.checkQubitIndex = True
 try:
     q.getQubit(2)
 except IndexError:

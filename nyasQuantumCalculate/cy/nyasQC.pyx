@@ -3,13 +3,12 @@
 # cython: wraparound = False
 # cython: cdivision = True
 
-from libc.math cimport sqrt, sin, cos, acos, fmod
+from libc.math cimport sqrt, sin, cos, acos, fmod, fabs
 from libc.math cimport M_SQRT1_2, M_PI
 from libc.stdlib cimport calloc, free
 from libc.time cimport time as ctime, clock
 from libc.limits cimport UINT_MAX as UNIT32_MAX
 from cpython.slice cimport PySlice_Unpack
-from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 
 
@@ -42,8 +41,8 @@ cdef complex128 conj(complex128 s):
     # return s_bar
     return s.real - s.imag
 
-cdef uint8 floatEqual0(float64 x):
-    return x < 1e-8
+cdef uint8 feq0(float64 x):
+    return fabs(x) < 1e-8
 
 cdef float32 clamp(float32 x, float32 a, float32 b):
     if b < x:
@@ -52,7 +51,7 @@ cdef float32 clamp(float32 x, float32 a, float32 b):
         return a
     return x
 
-cdef float32 color_f(uint8 n, float32 h_pi_3):
+cdef float32 colorF(uint8 n, float32 h_pi_3):
     cdef float32 k = <float32>fmod(n + h_pi_3, 6.)
     if k < 2:
         return clamp(k, 0., 1.)
@@ -84,7 +83,7 @@ cdef uint32 random_nextInt():       # return value in [0, 2^32-1]
     _random_state = (_random_state * _random_a + _random_c) & _random_m
     return (_random_state >> 16) & UNIT32_MAX
 
-cdef float32 random_nextFloat():    # return value in [0., 1.]
+cdef float32 nextFloat():           # return value in [0., 1.]
     return <float32>random_nextInt() / UNIT32_MAX
 
 #########################  Single Qubit Struct  ###############################
@@ -101,14 +100,14 @@ cdef void SQ_normalize(SingleQubit_s *data):
 cdef void SQ_reset(SingleQubit_s *data):
     data.x1 = 0.
     cdef float64 r0 = absSqr(data.x0)
-    if floatEqual0(r0):
+    if feq0(r0):
         data.x0 = 1.
     else:
         data.x0 /= sqrt(r0)
 
 cdef uint8 SQ_measure(SingleQubit_s *data):
     cdef float64 r = absSqr(data.x0)                    # probability of (measure result = 0)
-    cdef uint8 meas1 = random_nextFloat() > r           # is (measure = 1)?
+    cdef uint8 meas1 = nextFloat() > r           # is (measure = 1)?
     # apply result to qubit state and normalize
     if meas1:
         r = absSqr(data.x1)
@@ -135,13 +134,13 @@ cdef struct SingleQubitGate_s:
     complex128 d
 
 cdef uint8 SQG_isUnit(SingleQubitGate_s *data):             # is a unitary matrix?
-    if not floatEqual0(absSqr(data.a * conj(data.c) + data.b * conj(data.d))):
+    if not feq0(absSqr(data.a * conj(data.c) + data.b * conj(data.d))):
         return 0
-    if not floatEqual0(absSqr(data.a * conj(data.b) + data.c * conj(data.d))):
+    if not feq0(absSqr(data.a * conj(data.b) + data.c * conj(data.d))):
         return 0
     cdef double absA = absSqr(data.a), absB = absSqr(data.b), absC = absSqr(data.c), absD = absSqr(data.d)
-    if floatEqual0(absA + absB - 1.) and floatEqual0(absA + absC - 1.) and \
-       floatEqual0(absD + absB - 1.) and floatEqual0(absD + absC - 1.):
+    if feq0(absA + absB - 1.) and feq0(absA + absC - 1.) and \
+       feq0(absD + absB - 1.) and feq0(absD + absC - 1.):
        return 1
     return 0
 
@@ -186,7 +185,7 @@ cdef void MQ_resetAll(MultiQubits_s *data):
     cdef complex128 x0 = data.states[0]
     MQ_clearState(data)
     cdef float64 r0 = absSqr(x0)
-    if floatEqual0(r0):
+    if feq0(r0):
         data.states[0] = 1.
     else:
         data.states[0] = x0 / sqrt(r0)
@@ -217,6 +216,40 @@ cdef execCode MQ_applyTo(MultiQubits_s *data, SingleQubitGate_s *gate, uint8 idx
     old_states = NULL
     return SUCCESS
 
+cdef execCode MQ_applyToEach(MultiQubits_s *data, SingleQubitGate_s *gate, uint8 total):
+    # copy and clean states
+    cdef complex128 *old_states = <complex128 *>calloc(data.length, 16)
+    if old_states == NULL:
+        return MEMORYERROE
+    cdef i, j, tag, _
+    for i in range(data.length):
+        old_states[i] = data.states[i]
+        data.states[i] = 0.
+    cdef complex128 tmp0, tmp1
+    # maxtrix multiplication
+    for i in range(data.length):
+        tmp0 = old_states[i]
+        for j in range(data.length):
+            tmp1 = 1.
+            tag = 1
+            for _ in range(total):
+                if i & tag:
+                    if j & tag:
+                        tmp1 *= gate.d
+                    else:
+                        tmp1 *= gate.b
+                else:
+                    if j & tag:
+                        tmp1 *= gate.c
+                    else:
+                        tmp1 *= gate.a
+                tag <<= 1
+            data.states[j] += tmp1 * tmp0
+    # clean up
+    free(old_states)
+    old_states = NULL
+    return SUCCESS
+
 cdef uint8 MQ_measure(MultiQubits_s *data, uint8 idx):
     cdef uint64 tag = (<uint64>1) << idx
     cdef float64 r = 0.
@@ -225,7 +258,7 @@ cdef uint8 MQ_measure(MultiQubits_s *data, uint8 idx):
     for index in range(range0):
         if not index & tag:
             r += absSqr(data.states[index])
-    cdef uint8 meas1 = random_nextFloat() > r           # is measure result = 1 ?
+    cdef uint8 meas1 = nextFloat() > r           # is measure result = 1 ?
     # apply result to qubit state and normalize
     r = 0.
     for index in range(data.length):
@@ -284,9 +317,10 @@ cdef void MQ_reset(MultiQubits_s *data, uint8 idx):
 #################################  Options  ###################################
 
 cdef uint8 autoNormalize = 1
-cdef uint8 checkUnitGate = 1
+cdef uint8 autoCheckUnitGate = 1
 cdef uint8 ignoreWarning = 0
-cdef uint8 checkQubitIdx = 1
+cdef uint8 checkQubitIndex = 1
+cdef uint8 checkInSameSystem = 1
 
 cdef uint8 _is_init_options = 0
 cdef class _options:
@@ -302,24 +336,30 @@ cdef class _options:
         def __set__(self, bint b):
             global autoNormalize
             autoNormalize = <uint8>b
-    property checkUnitGate:
+    property autoCheckUnitGate:
         def __get__(self):
-            return <bint>checkUnitGate
+            return <bint>autoCheckUnitGate
         def __set__(self, bint b):
-            global checkUnitGate
-            checkUnitGate = <uint8>b
+            global autoCheckUnitGate
+            autoCheckUnitGate = <uint8>b
     property ignoreWarning:
         def __get__(self):
             return <bint>ignoreWarning
         def __set__(self, bint b):
             global ignoreWarning
             ignoreWarning = <uint8>b
-    property checkQubitIdx:
+    property checkQubitIndex:
         def __get__(self):
-            return <bint>checkQubitIdx
+            return <bint>checkQubitIndex
         def __set__(self, bint b):
-            global checkQubitIdx
-            checkQubitIdx = <uint8>b
+            global checkQubitIndex
+            checkQubitIndex = <uint8>b
+    property checkInSameSystem:
+        def __get__(self):
+            return <bint>checkInSameSystem
+        def __set__(self, bint b):
+            global checkInSameSystem
+            checkInSameSystem = <uint8>b
 
 ##########################  Temporary Options  ################################
 
@@ -353,14 +393,17 @@ cdef class _temp_options:
     def autoNormalize(_temp_options self, bint after):
         return TempOption(<uint64>&autoNormalize, after, <uint64>&_is_init_temp_options)
 
-    def checkUnitGate(_temp_options self, bint after):
-        return TempOption(<uint64>&checkUnitGate, after, <uint64>&_is_init_temp_options)
+    def autoCheckUnitGate(_temp_options self, bint after):
+        return TempOption(<uint64>&autoCheckUnitGate, after, <uint64>&_is_init_temp_options)
 
     def ignoreWarning(_temp_options self, bint after):
         return TempOption(<uint64>&ignoreWarning, after, <uint64>&_is_init_temp_options)
 
-    def checkQubitIdx(_temp_options self, bint after):
-        return TempOption(<uint64>&checkQubitIdx, after, <uint64>&_is_init_temp_options)
+    def checkQubitIndex(_temp_options self, bint after):
+        return TempOption(<uint64>&checkQubitIndex, after, <uint64>&_is_init_temp_options)
+
+    def checkInSameSystem(_temp_options self, bint after):
+        return TempOption(<uint64>&checkInSameSystem, after, <uint64>&_is_init_temp_options)
 
 ###########################  Interface  Class  ################################
 
@@ -374,6 +417,28 @@ cdef class Qubit(QuantumObject):
 
     def measure(Qubit self):
         raise NotImplementedError(f"{self.__class__.__name__}.measure is not defined")
+
+    def reset(Qubit self):
+        raise NotImplementedError(f"{self.__class__.__name__}.reset is not defined")
+
+cdef class Qubits(QuantumObject):
+    def measure(Qubits self, uint8 idx):
+        raise NotImplementedError(f"{self.__class__.__name__}.measure is not defined")
+
+    def measureAll(Qubits self):
+        raise NotImplementedError(f"{self.__class__.__name__}.measureAll is not defined")
+
+    def reset(Qubits self, uint8 idx):
+        raise NotImplementedError(f"{self.__class__.__name__}.reset is not defined")
+
+    def resetAll(Qubits self):
+        raise NotImplementedError(f"{self.__class__.__name__}.resetAll is not defined")
+
+    def applyTo(Qubits self, SingleQubitOperation opr, uint8 idx):
+        raise NotImplementedError(f"{self.__class__.__name__}.applyTo is not defined")
+
+    def applyToEach(Qubits self, SingleQubitOperation opr):
+        raise NotImplementedError(f"{self.__class__.__name__}.applyToEach is not defined")
 
 cdef class QuantumOperation:
     # TODO: Using Quantumoperation.name to track qubits system
@@ -426,7 +491,7 @@ cdef class SingleQubitGate(SingleQubitOperation):
         self.data.b = b
         self.data.c = c
         self.data.d = d
-        self.isUnit = SQG_isUnit(&self.data) if checkUnitGate else -1
+        self.isUnit = SQG_isUnit(&self.data) if autoCheckUnitGate else -1
 
     property isUnitary:
         def __get__(self):
@@ -440,8 +505,8 @@ cdef class SingleQubitGate(SingleQubitOperation):
 
     def __imul__(SingleQubitGate self, complex128 s):
         SQG_multiConst(&self.data, s)
-        if checkUnitGate:
-            if self.isUnit == 1 and not floatEqual0(absSqr(s) - 1.):
+        if autoCheckUnitGate:
+            if self.isUnit == 1 and not feq0(absSqr(s) - 1.):
                 self.isUnit = 0
             else:
                 self.isUnit = SQG_isUnit(&self.data)
@@ -450,15 +515,15 @@ cdef class SingleQubitGate(SingleQubitOperation):
         return self
 
     def __mul__(SingleQubitGate self, complex128 s):
-        global checkUnitGate
-        cdef uint8 before_ = checkUnitGate
-        checkUnitGate = 0
+        global autoCheckUnitGate
+        cdef uint8 before_ = autoCheckUnitGate
+        autoCheckUnitGate = 0
         cdef SingleQubitGate new_SQG = SingleQubitGate(self.data.a, self.data.b, self.data.c, self.data.d)
-        checkUnitGate = before_
+        autoCheckUnitGate = before_
         # new_SQG.__imul__
         SQG_multiConst(&new_SQG.data, s)
-        if checkUnitGate:
-            if self.isUnit == 1 and not floatEqual0(absSqr(s) - 1.):
+        if autoCheckUnitGate:
+            if self.isUnit == 1 and not feq0(absSqr(s) - 1.):
                 new_SQG.isUnit = 0
             else:
                 new_SQG.isUnit = SQG_isUnit(&new_SQG.data)
@@ -470,13 +535,13 @@ cdef class SingleQubitGate(SingleQubitOperation):
                            "instead of 'SingleQubitGate.__rmul__'")
 
     def __matmul__(SingleQubitGate self, SingleQubitGate right):
-        global checkUnitGate
-        cdef uint8 before_ = checkUnitGate
-        checkUnitGate = 0
+        global autoCheckUnitGate
+        cdef uint8 before_ = autoCheckUnitGate
+        autoCheckUnitGate = 0
         cdef SingleQubitGate new_SQG = SingleQubitGate(self.data.a, self.data.b, self.data.c, self.data.d)
-        checkUnitGate = before_
+        autoCheckUnitGate = before_
         SQG_matrixMul(&new_SQG.data, &right.data)
-        if checkUnitGate:
+        if autoCheckUnitGate:
             if self.isUnit == 1 and right.isUnit == 1:
                 new_SQG.isUnit = 1
             else:
@@ -488,7 +553,7 @@ cdef class SingleQubitGate(SingleQubitOperation):
 
 #########################  Multiple Qubits System  ############################
 
-cdef class MultiQubits(QuantumObject):
+cdef class MultiQubits(Qubits):
     cdef:
         MultiQubits_s data
         readonly uint8 nQubits
@@ -527,7 +592,7 @@ cdef class MultiQubits(QuantumObject):
 
     def applyTo(MultiQubits self, SingleQubitOperation opr, uint8 idx):
         cdef execCode code
-        if checkQubitIdx and (idx >= self.nQubits or idx < 0):
+        if checkQubitIndex and (idx >= self.nQubits or idx < 0):
             raise IndexError(f"{self.nQubits} qubits system has no qubit with index {idx}")
         if isinstance(opr, SingleQubitGate):
             code = MQ_applyTo(&self.data, &(<SingleQubitGate>opr).data, idx)
@@ -537,15 +602,35 @@ cdef class MultiQubits(QuantumObject):
         if autoNormalize:
             MQ_normalize(&self.data)
 
+    def applyToEach(MultiQubits self, SingleQubitOperation opr):
+        cdef execCode code
+        cdef uint8 index
+        if isinstance(opr, SingleQubitGate):
+            code = MQ_applyToEach(&self.data, &(<SingleQubitGate>opr).data, self.nQubits)
+            if code == MEMORYERROE:
+                raise MemoryError("In method 'MultiQubits.applyTo', no adequate memory to be allocated, "
+                                 f"{self.data.length * 16} bytes available memory size is needed")
+        if autoNormalize:
+            MQ_normalize(&self.data)
+
     def measure(MultiQubits self, uint8 idx):
-        if checkQubitIdx and (idx >= self.nQubits or idx < 0):
+        if checkQubitIndex and (idx >= self.nQubits or idx < 0):
             raise IndexError(f"{self.nQubits} qubits system has no qubit with index {idx}")
         if autoNormalize:
             MQ_normalize(&self.data)
         return <bint>MQ_measure(&self.data, idx)
 
+    def measureAll(MultiQubits self):
+        cdef index
+        if autoNormalize:
+            MQ_normalize(&self.data)
+        return tuple(
+            <bint>MQ_measure(&self.data, index)
+            for index in range(self.nQubits)
+        )
+
     def control(MultiQubits self, SingleQubitGate gate, object intList, uint8 idx):
-        if checkQubitIdx and (idx >= self.nQubits or idx < 0):
+        if checkQubitIndex and (idx >= self.nQubits or idx < 0):
             raise IndexError(f"{self.nQubits} qubits system has no qubit with index {idx}")
         cdef QubitIndexList cList
         cdef int list_length = <int>len(intList)    # TypeError
@@ -560,49 +645,46 @@ cdef class MultiQubits(QuantumObject):
         for ele in intList:                         # TypeError
             if ele == idx:
                 raise ValueError(f"controlled-qubit and control-qubit should not be the same: qubit index {idx}")
-            if checkQubitIdx and (ele >= self.nQubits or ele < 0):
+            if checkQubitIndex and (ele >= self.nQubits or ele < 0):
                 raise IndexError(f"{self.nQubits} qubits system has no qubit with index {ele}")
             cList.idxs[i] = ele
             i += 1
         cdef execCode code = MQ_controll(&self.data, &gate.data, &cList, idx)
-        if code == MEMORYERROE:
-            free(cList.idxs)
-            cList.idxs = NULL
-            raise MemoryError("In method 'MultiQubits.controlled', no adequate memory to be allocated, "
-                             f"aronud {self.data.length * 16} bytes available memory size is needed")
-        #clean up
         free(cList.idxs)
         cList.idxs = NULL
+        if code == MEMORYERROE:
+            raise MemoryError("In method 'MultiQubits.controlled', no adequate memory to be allocated, "
+                             f"aronud {self.data.length * 16} bytes available memory size is needed")
         if autoNormalize:
             MQ_normalize(&self.data)
 
     def getQubit(MultiQubits self, uint8 idx):
-        return QubitIndex(idx, self)
+        return QubitIndex(self, idx)
 
     def __getitem__(MultiQubits self, object idx):
-        global checkQubitIdx
+        global checkQubitIndex
         cdef int64 start, stop, step, index
         cdef execCode code
-        cdef uint8 before_ = checkQubitIdx
-        checkQubitIdx = 0
+        cdef uint8 before_ = checkQubitIndex
+        checkQubitIndex = 0
         cdef object result
         if isinstance(idx, int):
             index = idx
             if index < 0:
                 index += self.nQubits
             if before_ and (index >= 0 and index >= self.nQubits):
-                checkQubitIdx = before_
+                checkQubitIndex = before_
                 raise IndexError(f"{self.nQubits} qubits system has no qubit with index {index}")
-            result = QubitIndex(index, self)
+            result = QubitIndex(self, index)
         elif isinstance(idx, slice):
             code = correctIndex(idx, self.nQubits, &start, &stop, &step)
             if code != SUCCESS:
                 raise RuntimeError(f"error in MultiQubits.__getitem__: {code}")
-            result = [QubitIndex(index, self) for index in range(start, stop, step)]
+            result = MultiQubitIndex(self, *range(start, stop, step))
         else:
-            checkQubitIdx = before_
+            checkQubitIndex = before_
             raise TypeError(f"indices must be integers or slices, not{type(idx)}")
-        checkQubitIdx = before_
+        checkQubitIndex = before_
         return result
     # TODO: reset(self, idx: int) -> None
 
@@ -611,8 +693,8 @@ cdef class QubitIndex(Qubit):
     cdef:
         readonly uint8 index
         readonly MultiQubits system
-    def __init__(QubitIndex self, uint8 idx, MultiQubits sys):
-        if checkQubitIdx and (idx >= sys.nQubits or idx < 0):
+    def __init__(QubitIndex self, MultiQubits sys, uint8 idx):
+        if checkQubitIndex and (idx >= sys.nQubits or idx < 0):
             raise IndexError(f"{sys.nQubits} qubits system has no qubit with index {idx}")
         self.index = idx
         self.system = sys
@@ -625,7 +707,7 @@ cdef class QubitIndex(Qubit):
             code = MQ_applyTo(&self.system.data, &(<SingleQubitGate>opr).data, self.index)
             if code == MEMORYERROE:
                 raise MemoryError("In method 'QubitIndex.apply', no adequate memory to be allocated, "
-                                 f"{self.data.length * 16} bytes available memory size is needed")
+                                 f"{self.system.data.length * 16} bytes available memory size is needed")
         if autoNormalize:
             MQ_normalize(&self.system.data)
 
@@ -640,13 +722,123 @@ cdef class QubitIndex(Qubit):
     def __repr__(QubitIndex self):
         return f"QubitIndex({self.index})"
 
+
+cdef class MultiQubitIndex(Qubits):
+    cdef:
+        QubitIndexList data
+        readonly MultiQubits system
+    def __cinit__(MultiQubitIndex self, MultiQubits sys, *idxs):
+        self.data.idxs = <uint8 *>calloc(63, 1)
+        if self.data.idxs == NULL:
+            raise MemoryError("In method 'MultiQubitIndex.__cinit__', no adequate memory to be allocated, "
+                              "63 bytes available memory size is needed")
+    def __init__(MultiQubitIndex self, MultiQubits sys, *idxs):
+        self.data.length = 0
+        self.system = sys
+        cdef int list_length = <int>len(idxs)
+        if list_length > sys.nQubits:
+            raise ValueError("length of 'idxs' is bigger than qubits in 'sys'")
+        if list_length == 0:
+            return
+        cdef object ele
+        cdef uint8 idx
+        for ele in idxs:
+            self.data.idxs[self.data.length] = self.correctIndex(ele)
+            self.data.length += 1
+
+    cdef uint8 correctIndex(MultiQubitIndex self, object idx):
+        cdef uint8 index
+        if isinstance(idx, int):
+            index = idx
+        elif isinstance(idx, QubitIndex):
+            index = idx.index
+            if checkInSameSystem and id(self.system) != id(idx.system):
+                raise ValueError(f"check different qubits system")
+        else:
+            raise TypeError("except int or QubitIndex")
+        if checkQubitIndex and index > self.system.nQubits:
+                raise IndexError(f"{self.system.nQubits} qubits system has no qubit with index {index}")
+        return index
+
+    cdef uint8 correctIndexx(MultiQubitIndex self, int64 idxx):
+        cdef int64 index = idxx if idxx >=0 else idxx + self.data.length
+        if 0 > index or index >= self.data.length:
+            raise IndexError(f"{self.__name__} have no index {idxx}")
+        return <uint8>index
+
+    def __dealloc__(MultiQubitIndex self):
+        free(self.data.idxs)
+        self.data.idxs = NULL
+
+    def asList(MultiQubitIndex self):
+        global checkQubitIndex
+        cdef uint8 before_ = checkQubitIndex
+        checkQubitIndex = 0
+        cdef uint8 index
+        cdef list result = [QubitIndex(self.sys, self.data.idxs[index]) for index in range(self.data.length)]
+        checkQubitIndex = before_
+        return result
+
+    def append(MultiQubitIndex self, object idx):
+        if self.data.length >= 63:
+            raise IndexError(f"{self.__name__} already have 63 elements")
+        self.data.idxs[self.data.length] = self.correctIndex(idx)
+        self.data.length += 1
+
+    def __len__(MultiQubitIndex self):
+        return self.data.length
+
+    def __getitem__(MultiQubitIndex self, int64 idxx):
+        return QubitIndex(self.sys, self.data.idxs[self.correctIndexx(idxx)])
+
+    def __setitem__(MultiQubitIndex self, int64 idxx, object idx):
+        self.data.idxs[self.correctIndexx(idxx)] = self.correctIndex(idx)
+
+    def applyTo(MultiQubitIndex self, SingleQubitOperation opr, int64 idxx):
+        cdef uint8 index = self.data.idxs[self.correctIndexx(idxx)]
+        cdef execCode code
+        if isinstance(opr, SingleQubitGate):
+            code = MQ_applyTo(&self.system.data, &(<SingleQubitGate>opr).data, index)
+            if code == MEMORYERROE:
+                raise MemoryError("In method 'MultiQubitIndex.applyTo', no adequate memory to be allocated, "
+                                 f"{self.system.data.length * 16} bytes available memory size is needed")
+        if autoNormalize:
+            MQ_normalize(&self.system.data)
+
+    def applyToEach(MultiQubitIndex self, SingleQubitOperation opr):
+        cdef uint8 indexx
+        cdef execCode code
+        if isinstance(opr, SingleQubitGate):
+            for indexx in range(self.data.length):
+                code = MQ_applyTo(&self.system.data, &(<SingleQubitGate>opr).data, self.data.idxs[indexx])
+                if code == MEMORYERROE:
+                    raise MemoryError("In method 'MultiQubitIndex.applyTo', no adequate memory to be allocated, "
+                                     f"{self.system.data.length * 16} bytes available memory size is needed")
+        if autoNormalize:
+            MQ_normalize(&self.system.data)
+
+    def measure(MultiQubitIndex self, int64 idxx):
+        if autoNormalize:
+            MQ_normalize(&self.system.data)
+        return <bint>MQ_measure(&self.system.data, self.data.idxs[self.correctIndexx(idxx)])
+
+    def measureAll(MultiQubitIndex self):
+        cdef indexx
+        if autoNormalize:
+            MQ_normalize(&self.system.data)
+        return tuple(
+            <bint>MQ_measure(&self.system.data, self.data.idxs[indexx])
+            for indexx in range(self.data.length)
+        )
+
+
 ############################  Default Objects  ################################
 
 Options = _options()
 TemporaryOptions = _temp_options()
 
 # Single Qubit Gates
-checkUnitGate = 0
+autoCheckUnitGate = 0
 I = SingleQubitGate(1., 0., 0., 1.)
 (<SingleQubitGate>I).isUnit = 1
 H = SingleQubitGate(M_SQRT1_2, M_SQRT1_2, M_SQRT1_2, -M_SQRT1_2)
@@ -661,88 +853,112 @@ S = SingleQubitGate(1., 0., 0., 1.j)
 (<SingleQubitGate>S).isUnit = 1
 T = SingleQubitGate(1., 0., 0., M_SQRT1_2 + 1j*M_SQRT1_2)
 (<SingleQubitGate>T).isUnit = 1
-checkUnitGate = 1
+autoCheckUnitGate = 1
 def Rx(float64 angle):
-    global checkUnitGate
-    cdef uint8 before_ = checkUnitGate
-    checkUnitGate = 0
+    global autoCheckUnitGate
+    cdef uint8 before_ = autoCheckUnitGate
+    autoCheckUnitGate = 0
     cdef float64 half_angle = angle / 2.
     cdef float64 a = cos(half_angle)
     cdef complex128 b = -1j * sin(half_angle)
     cdef SingleQubitGate result = SingleQubitGate(a, b, b, a)
     result.isUnit = 1
-    checkUnitGate = before_
+    autoCheckUnitGate = before_
     return result
 def Ry(double angle):
-    global checkUnitGate
-    cdef uint8 before_ = checkUnitGate
-    checkUnitGate = 0
+    global autoCheckUnitGate
+    cdef uint8 before_ = autoCheckUnitGate
+    autoCheckUnitGate = 0
     cdef float64 half_angle = angle / 2.
     cdef float64 a = cos(half_angle)
     cdef float64 b = sin(half_angle)
     cdef SingleQubitGate result = SingleQubitGate(a, -b, b, a)
     result.isUnit = 1
-    checkUnitGate = before_
+    autoCheckUnitGate = before_
     return result
 def Rz(double angle):
-    global checkUnitGate
-    cdef uint8 before_ = checkUnitGate
-    checkUnitGate = 0
+    global autoCheckUnitGate
+    cdef uint8 before_ = autoCheckUnitGate
+    autoCheckUnitGate = 0
     cdef float64 half_angle = angle / 2.
     cdef float64 a = cos(half_angle)
     cdef complex128 b = 1j * sin(half_angle)
     cdef SingleQubitGate result = SingleQubitGate(a - b, 0., 0., a + b)
     result.isUnit = 1
-    checkUnitGate = before_
+    autoCheckUnitGate = before_
     return result
 def R1(double angle):
-    global checkUnitGate
-    cdef uint8 before_ = checkUnitGate
-    checkUnitGate = 0
+    global autoCheckUnitGate
+    cdef uint8 before_ = autoCheckUnitGate
+    autoCheckUnitGate = 0
     cdef float64 a = cos(angle)
     cdef float64 b = sin(angle)
     cdef SingleQubitGate result = SingleQubitGate(1., 0., 0., a + 1j*b)
     result.isUnit = 1
-    checkUnitGate = before_
+    autoCheckUnitGate = before_
     return result
+
+# Control gate
+def Control(SingleQubitGate gate, object qbList, QubitIndex idx):
+    cdef execCode code
+    cdef uint8 index, indexx
+    cdef MultiQubitIndex MQI
+    cdef MultiQubits sys = idx.system
+    cdef QubitIndexList cList
+    cdef int list_length
+    cdef QubitIndex ele
+    if isinstance(qbList, MultiQubitIndex):
+        MQI = <MultiQubitIndex>qbList
+        for indexx in range(MQI.data.length):
+            index = MQI.data.idxs[indexx]
+            if index == idx.index:
+                raise ValueError(f"controlled-qubit and control-qubit should not be the same: qubit index {idx.index}")
+            if not checkInSameSystem and checkQubitIndex and (index < 0 or index >= sys.nQubits):
+                raise IndexError(f"{sys.nQubits} qubits system has no qubit with index {index}")
+        if checkInSameSystem and id(MQI.system) != id(sys):
+            raise ValueError(f"check different qubits system")
+        code = MQ_controll(&sys.data, &gate.data, &MQI.data, idx.index)
+    else:
+        list_length = <int>len(qbList)          # TypeError
+        if list_length >= 63:
+            raise ValueError(f"list length >= 63")
+        cList.length = <uint8>list_length
+        cList.idxs = <uint8 *>calloc(cList.length, 1)
+        if cList.idxs == NULL:
+            raise MemoryError("In method 'MultiQubits.controlled', no adequate memory to be allocated, "
+                             f"{cList.length} bytes available memory size is needed")
+        indexx = 0
+        for ele in qbList:                      # TypeError
+            index = ele.index
+            if index == idx.index:
+                raise ValueError(f"controlled-qubit and control-qubit should not be the same: qubit index {index}")
+            if checkInSameSystem and id(ele.system) != id(sys):
+                raise ValueError(f"check different qubits system")
+            elif checkQubitIndex and (index < 0 or index > sys.nQubits):
+                raise IndexError(f"{sys.nQubits} qubits system has no qubit with index {index}")
+            cList.idxs[indexx] = index
+            indexx += 1
+        code = MQ_controll(&sys.data, &gate.data, &cList, idx.index)
+        free(cList.idxs)
+        cList.idxs = NULL
+    if code == MEMORYERROE:
+        raise MemoryError("In method 'MultiQubits.controlled', no adequate memory to be allocated, "
+                         f"aronud {sys.data.length * 16} bytes available memory size is needed")
+    if autoNormalize:
+        MQ_normalize(&sys.data)
 
 # CNOT gate (syntactic sugar)
 def CNOT(QubitIndex q0, QubitIndex q1):
-    if q0.system != q1.system:
+    if checkInSameSystem and id(q0.system) != id(q1.system):
         raise TypeError("'q0' and 'q1' is not in the same system")
     q0.system.control(X, [q0.index], q1.index)
-
-# apply operation to every qubit in system (syntactic sugar)
-def ApplyToEach(SingleQubitOperation opr, MultiQubits qubits):
-    global autoNormalize, checkQubitIdx
-    cdef uint8 before0 = autoNormalize, before1 = checkQubitIdx
-    autoNormalize = 0; checkQubitIdx = 0
-    cdef uint8 index
-    for index in range(qubits.nQubits):
-        qubits.applyTo(opr, index)
-    if before0:
-        qubits.normalize()
-    autoNormalize = before0; checkQubitIdx = before1
-
-def MeasureAll(MultiQubits qubits):
-    global autoNormalize, checkQubitIdx
-    cdef uint8 before0 = autoNormalize, before1 = checkQubitIdx
-    autoNormalize = 0; checkQubitIdx = 0
-    cdef uint8 index
-    cdef tuple result = PyTuple_New(qubits.nQubits)
-    if before0:
-        qubits.normalize()
-    for index in range(qubits.nQubits):
-        PyTuple_SET_ITEM(result, index, qubits.measure(index))
-    autoNormalize = before0; checkQubitIdx = before1
-    return result
 
 # convert states format 'a+bi' to 'L*e^(ti)'
 def convert_number(complex128 s):
     cdef float64 r = s.real, i = s.imag
     cdef float64 L = sqrt(r * r + i * i)
     cdef float64 theta = 0.
-    if not floatEqual0(L):
+    if not feq0(L):
         theta = acos(r / L)
     if i < 0:
         return (L, -theta)
@@ -758,9 +974,9 @@ def ColorWheel2RGB(float32 theta, bint is01):
     if theta < 0.:
         theta_ += <float32>PI2
     cdef float32 h_pi_3 = <float32>(3. * theta_ / M_PI)
-    cdef float32 R = color_f(2, h_pi_3)
-    cdef float32 G = color_f(0, h_pi_3)
-    cdef float32 B = color_f(4, h_pi_3)
+    cdef float32 R = colorF(2, h_pi_3)
+    cdef float32 G = colorF(0, h_pi_3)
+    cdef float32 B = colorF(4, h_pi_3)
     if is01:
         return (R, G, B)
     else:
