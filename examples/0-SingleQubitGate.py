@@ -3,66 +3,66 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from nyasQuantumCalculate import *
-from nyasQuantumCalculate import Gates
-from nyasQuantumCalculate import Utils
 
 
+sytm = QubitsSystem(1)
+qubit: Qubit = sytm[0]
 
-qubit = SingleQubit()
+
 print("Original qubit:")
-Utils.DumpMachineText(qubit)        # ∣0❭: 1, ∣1❭: 0
+DumpSystemText(qubit.system)        # ∣0❭: 1, ∣1❭: 0
 
 
 # Identity Gate
 # I gate doing somthing looks like do nothing
 print("after Identity gate:")
-Gates.I(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 1, ∣1❭: 0
-Reset(qubit)
+I(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 1, ∣1❭: 0
+# Reset
 
 
 # Pauli Gates
 # X gate can reverse states ∣0❭ and ∣1❭
 print("after pauli-X gate:")
-Gates.X(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: 1
-Reset(qubit)
+X(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: 1
+X(qubit)    # Reset
 
 # Y gate do similar thing as X gate, but on image number
 print("after pauli-Y gate:")
-Gates.Y(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: i
-Reset(qubit)
+Y(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: i
+Y(qubit)    # Reset
 
 # Z gate will flip the phase of ∣1❭, but do nothing on ∣0❭
 print("after pauli-X gate and pauli-Z gate:")
-Gates.X(qubit)  # ∣0❭: 0, ∣1❭: 1
-Gates.Z(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: -1
-Reset(qubit)
+X(qubit)    # ∣0❭: 0, ∣1❭: 1
+Z(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: -1
+Z(qubit); X(qubit)  # Reset
 
 
 # Hadamard Gate
 # H gate will make qubit between ∣0❭ and ∣1❭
 print("after Hadamard gate:")
-Gates.H(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: .707, ∣1❭: .707
-Reset(qubit)
+H(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: .707, ∣1❭: .707
+H(qubit)    # Reset
 
 
 # Pahse Shift Gates
 # T gate and S gate will shift phase of ∣1❭, but do nothing on ∣0❭
 print("after pauli-X gate and T gate:")
-Gates.X(qubit)  # ∣0❭: 0, ∣1❭: 1
-Gates.T(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: .707+.707i
-Reset(qubit)
+X(qubit)    # ∣0❭: 0, ∣1❭: 1
+T(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: .707+.707i
+TReverse(qubit); X(qubit)   # Reset
 
 print("after pauli-X gate and S gate:")
-Gates.X(qubit)  # ∣0❭: 0, ∣1❭: 1
-Gates.S(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: i
-Reset(qubit)
+X(qubit)  # ∣0❭: 0, ∣1❭: 1
+S(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: i
+SReverse(qubit); X(qubit)   # Reset
 
 
 # Rotation Gates
@@ -71,22 +71,26 @@ Reset(qubit)
 angle = 1.0471975511966     # pi / 3
 
 print("after Rotation-X gate:")
-Gates.Rx(angle)(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: .866, ∣1❭: -.5i
-Reset(qubit)
+Rx(angle)(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: .866, ∣1❭: -.5i
+Rx(-angle)(qubit)   # Reset
 
 print("after Rotation-Y gate:")
-Gates.Ry(angle)(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: .866, ∣1❭: .5
-Reset(qubit)
+Ry(angle)(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: .866, ∣1❭: .5
+Ry(-angle)(qubit)   # Reset
 
 print("after Rotation-Z gate:")
-Gates.Rz(angle)(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: .866-.5i, ∣1❭: 0
-Gates.X(qubit); Reset(qubit)
+Rz(angle)(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: .866-.5i, ∣1❭: 0
+Rz(-angle)(qubit)   # Reset
 
 print("after pauli-X gate and Rotation-1 gate:")
-Gates.X(qubit)
-Gates.R1(angle)(qubit)
-Utils.DumpMachineText(qubit)        # ∣0❭: 0, ∣1❭: .5+.866i
-Reset(qubit)
+X(qubit)
+R1(angle)(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: .5+.866i
+R1(-angle)(qubit); X(qubit)     # Reset
+
+
+# Exit
+ResetAll(sytm.getQubits())

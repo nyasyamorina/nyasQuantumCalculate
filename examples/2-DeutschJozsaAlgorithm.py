@@ -2,9 +2,9 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+import numpy as np
+
 from nyasQuantumCalculate import *
-from nyasQuantumCalculate import Gates
-from nyasQuantumCalculate import Utils
 
 
 
@@ -73,11 +73,21 @@ class Even1BitsC(UnknownFunctionClassical):
             x >>= 1
         return count & 1 == 0
 
+class RandomFunC(UnknownFunctionClassical):
+    def __init__(self, n: int) -> None:
+        self.choice = np.array(())
+    def setTotalBits(self, n: int) -> None:
+        self.choice = np.random.choice(1 << n, 1 << (n - 1), False)
+    def __call__(self, x: int) -> bool:
+        return x in self.choice
+
 
 #################  算法本体
 
 def DeutscheJozsaClassical(totalBits: int,
                            func: UnknownFunctionClassical) -> bool:
+    if isinstance(func, RandomFunC):
+        func.setTotalBits(totalBits)
     # 如果func为常数函数则返回True, 否则为False
     f0 = func(0)
     steps = 1
@@ -112,34 +122,51 @@ print(f"Is constant function?(C): {DeutscheJozsaClassical(5, IfNthBitC(3))}")
 class UnknownFunctionQuantum:
     def __init__(self, n: int = 0) -> None:
         raise NotImplementedError
-    def __call__(self, qubits: MultiQubits) -> None:
+    def __call__(self, qbs: Qubits) -> None:
         raise NotImplementedError
 
 class Constant0Q(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
         pass
-    def __call__(self, qubits: MultiQubits) -> None:
+    def __call__(self, qbs: Qubits) -> None:
         pass
 
 class Constant1Q(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
-        self.reversStateGate = Gates.I * -1
-    def __call__(self, qubits: MultiQubits) -> None:
-        self.reversStateGate(qubits[0])
+        self.reversStateGate = I * -1
+    def __call__(self, qbs: Qubits) -> None:
+        self.reversStateGate(qbs[0])
 
 class IfNthBitQ(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
         self.n = n
-    def __call__(self, qubits: MultiQubits) -> None:
-        if self.n >= qubits.nQubits:
+
+    def __call__(self, qbs: Qubits) -> None:
+        if self.n >= len(qbs):
             return
-        Gates.Z(qubits[self.n])
+        Z(qbs[self.n])
 
 class Even1BitsQ(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
         pass
-    def __call__(self, qubits: MultiQubits) -> None:
-        Gates.ApplyToEach(Gates.Z, qubits)
+    def __call__(self, qbs: Qubits) -> None:
+        ApplyToEach(Z, qbs)
+
+class RandomFunQ(UnknownFunctionQuantum):
+    def __init__(self, n: int) -> None:
+        pass
+    def __call__(self, qbs: Qubits) -> None:
+        n = len(qbs)
+        choice = np.random.choice(1 << n, 1 << (n - 1), False)
+        print(choice)
+        with TemporaryQubit(qbs.system) as tmQ:
+            # 使用了所谓的"相位反冲技巧"
+            X(tmQ)
+            H(tmQ)
+            for integer in choice:
+                ControlledOnInt(X, integer, qbs, tmQ)
+            H(tmQ)
+            X(tmQ)
 
 
 #################  算法本体
@@ -147,30 +174,27 @@ class Even1BitsQ(UnknownFunctionQuantum):
 def DeutscheJozsaQuantum(totalBits: int,
                          func: UnknownFunctionQuantum) -> bool:
     # 如果func为常数函数则返回True, 否则为False
-    qubits = MultiQubits(totalBits)
-    Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
-        else Utils.DumpMachineText(qubits)
+    sytm = QubitsSystem(totalBits)
+    qubits: Qubits = sytm[:]
+    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
-    Gates.ApplyToEach(Gates.H, qubits)
-    Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
-        else Utils.DumpMachineText(qubits)
+    ApplyToEach(H, qubits)
+    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     func(qubits)
-    Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
-        else Utils.DumpMachineText(qubits)
+    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
-    Gates.ApplyToEach(Gates.H, qubits)
-    Utils.DumpMachineFig(qubits) if Utils.have_matplotlib \
-        else Utils.DumpMachineText(qubits)
+    ApplyToEach(H, qubits)
+    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     result = MeasureAll(qubits)
-    qubits.resetAll()
+    ResetAll(qubits)
     return not any(result)
 
-print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, Constant1Q(3))}")
+print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, IfNthBitQ(3))}")
 # 可以自己尝试调一下数据试着运行
 
 
 #######################  强烈注意
-# 在原本的 Deutsche Jozsa 算法里是需要引入额外的一个量子位作为纠缠
-# 不过其实yysy, 我也不知道额外的量子位有什么作用
+# 大多数情况下, DeutscheJozsa算法的示例是使用标记黑盒, 需要totalBits+1个量子位
+# 但这里是使用的是相位黑盒, 所以只需要totalBits个量子位

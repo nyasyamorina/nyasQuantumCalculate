@@ -1,63 +1,94 @@
-from typing import Union, Tuple, List
-from math import log10
+# -*- coding: utf-8 -*-
 
-have_matplotlib: bool = True
-try:
-    from matplotlib import pyplot as plt
-except ModuleNotFoundError:
-    have_matplotlib = False
+"""一些库内大量使用的方法和小工具
 
-from .cy.nyasQC import convert_number, convert_states, ColorWheel2RGB, \
-        SingleQubit, MultiQubits
+这个包不会被显式引用
 
+delta: 控制浮点数比较精度 [default: 1e-8]
+ColorWeel2RGB()
+TimeChunck
+"""
 
-__all__ = ["convert_number", "convert_states", "have_matplotlib",
-           "ColorWheel2RGB", "DumpMachineText", "DumpMachineFig"]
+from typing import Any, Dict, List, Tuple, Union
+from time import time
 
-
-log10_2: float = log10(2.)
-
-def DumpMachineText(sys: Union[SingleQubit, MultiQubits]) -> None:
-    states: Tuple[Tuple[complex], ...] = sys.states
-    if isinstance(sys, SingleQubit):
-        print("# states in 1 qubit system")
-        format_str: str = "{:01}"
-        length: int = 20
-    else:
-        print(f"# states in {sys.nQubits} qubits system")
-        idx_length: int = 1 + int(sys.nQubits * log10_2)
-        format_str: str = '{' + f":0{idx_length}" + '}'
-        length: int = 21 - idx_length
-    for i in range(len(states)):
-        a_b: Tuple[float, float] = (states[i][0].real, states[i][0].imag)
-        L_theta: Tuple[float, float] = convert_number(states[i][0])
-        prob: float = L_theta[0] * L_theta[0]
-        bar_length: int = int(prob * length)
-        if a_b[1] >= 0.:
-            print('∣' + format_str.format(i) + f"❭  [{a_b[0]: .4f} + {a_b[1]:.4f}i]  |{'='*bar_length}"
-                  f"{' '*(length-bar_length)}|  [prob: {prob:.4f}] [rad:{L_theta[1]: .4f}]")
-        else:
-            print('∣' + format_str.format(i) + f"❭  [{a_b[0]: .4f} - {-a_b[1]:.4f}i]  |{'='*bar_length}"
-                  f"{' '*(length-bar_length)}|  [prob: {prob:.4f}] [rad:{L_theta[1]: .4f}]")
-    print()
+import numpy as np
 
 
-def DumpMachineFig(sys: Union[SingleQubit, MultiQubits], block: bool = True) -> None:
-    if not have_matplotlib:
-        raise ModuleNotFoundError("No module named 'matplotlib'")
-    L, theta = zip(*convert_states(sys.states))
-    range_ = range(len(L))
-    if isinstance(sys, SingleQubit):
-        lables: List[str] = ["∣0❭", "∣1❭"]
-    else:
-        idx_length: int = 1 + int(sys.nQubits * log10_2)
-        format_str: str = "∣{" + f":0{idx_length}" + "}❭"
-        lables: List[str] = [format_str.format(i) for i in range(len(L))]
-    prob: List[float] = [l*l for l in L]
-    color: List[str] = ["#{:02X}{:02X}{:02x}".format(*ColorWheel2RGB(t, False)) for t in theta]
-    plt.clf()
-    plt.xticks(range_, lables, size=6, rotation="vertical", fontfamily="monospace")
-    plt.ylim(0., 1.1)
-    plt.ylabel("Probability")
-    plt.bar(range_, prob, color=color, ec="#000000", ls='-', lw=0.75)
-    plt.show(block=block)
+__all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck"]
+
+
+delta = 1e-8
+
+
+def equal0(x: float) -> bool:
+    return abs(x) <= delta
+
+
+def sss(arr: np.ndarray) -> Any:
+    return np.sum(np.square(np.abs(arr)))
+
+
+def colorF(n: int, h: float) -> float:
+    k = np.mod(n + h, 6.)
+    if k <= 2:
+        return np.clip(k, 0., 1.)
+    return np.clip(4. - k, 0., 1.)
+
+
+def ColorWheel2RGB(theta: float, get01: bool = False) -> \
+        Union[Tuple[int, int, int], Tuple[float, float, float]]:
+    """从色环上获取颜色
+
+    输入色环角度可以获取RGB颜色, 0为红色, 2*pi/3为绿色, 4*pi/3为蓝色
+
+    Args:
+        theta: 色环角度
+        get01: 如果为真, 返回[0.~1.]的浮点数, 否则为[0~255]的整数
+
+    Return:
+        返回包含RGB颜色的元组"""
+    h_pi_3 = 3. * theta / np.pi
+    red = colorF(2, h_pi_3)
+    green = colorF(0, h_pi_3)
+    blue = colorF(4, h_pi_3)
+    if get01:
+        return red, green, blue
+    return int(red * 255.), int(green * 255.), int(blue * 255.)
+
+
+totaltimer: Dict[str, List[Union[int, float]]] = dict()
+
+class TimeChunck:
+    """TimeChunk(str)
+
+    配合with语句计算特定代码块调用的次数和总共运行时间
+
+    To use:
+    >>> for _ in range(15):
+    ...     with TimeChunck("test"):
+    ...         time.sleep(0.03)
+    ...
+    >>> TimeChunck.getAll()
+    {'test': [15, 0.47789764404296875]}
+    """
+    def __init__(self, name: str):
+        self.name = name
+        self.start = 0.
+
+    @staticmethod
+    def getAll() -> Dict[str, List[Union[int, float]]]:
+        """得到全部计时条目
+
+        Returns:
+            一个字典包含计时名词, 和调用次数与总共运行时间的列表"""
+        return totaltimer
+
+    def __enter__(self):
+        if self.name not in totaltimer:
+            totaltimer[self.name] = [0, 0.]
+        self.start = time()
+
+    def __exit__(self, _:Any, __: Any, ___: Any) -> None:
+        totaltimer[self.name][0] += 1
+        totaltimer[self.name][1] += time() - self.start
