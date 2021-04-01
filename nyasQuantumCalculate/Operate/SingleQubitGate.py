@@ -28,11 +28,15 @@ class SingleQubitGate(QubitsOperation):
     def __init__(self,
                  a: complex, b: complex,
                  c: complex, d: complex,
+                 name: str = "",
                  **kwargs: Any) -> None:
         if not kwargs.get("_notCheck", False) and \
             not self.checkUnitGate(a, b, c, d):
             raise ValueError("输入参数不能构造单量子位门")
-        super().__init__(**kwargs)
+        super().__init__()
+        self.name = name
+        self.controllable = True
+        self.trackable = True
         self.matrix = np.array(((a, b), (c, d)), np.complex128)
 
     @staticmethod
@@ -55,6 +59,13 @@ class SingleQubitGate(QubitsOperation):
             equal0(np.abs(a * np.conj(b) + c * np.conj(d))) and \
             equal0(absA + absB - 1.) and equal0(absA + absC - 1.) and \
             equal0(absD + absB - 1.) and equal0(absD + absC - 1.)
+
+    def __str__(self) -> str:
+        return f"{self.name} Gate"
+
+    def __repr__(self) -> str:
+        (a, b), (c, d) = self.matrix
+        return f"{self.name}[{a:.2f} {b:.2f}; {c:.2f} {d:.2f}]"
 
     def __call__(self, q: Qubit) -> None:
         q.system.apply(self.matrix, q.index, self.name)

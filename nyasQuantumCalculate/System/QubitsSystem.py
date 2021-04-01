@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Literal, Tuple, Union, Any
+from typing import Iterable, List, Literal, Tuple, Union, Any
 
 import numpy as np
 
@@ -27,6 +27,9 @@ class QubitsSystem:
 
     退出程序或释放QubitsSystem实例前需要重置整个系统
 
+    Attributes:
+        stopTracking: 设置为False后, 就算allowTracking为True都不会继续跟踪操作.
+
     To use:
     >>> qbsys = QubitsSystem(2)
     >>> qbsys.id
@@ -49,16 +52,18 @@ class QubitsSystem:
         self._qIndexR = list(range(self.nQubits))
         self._tracker: List[Tuple[Tuple[int, ...],
                                   Tuple[int, ...], str]] = list()
+        self.stopTracking = False
 
     def __del__(self) -> None:
         print(f"Cleaning up qubits system with id:{self._id} ...")
-        get_state = False
-        for stateL in np.abs(self.statesNd.flat):
-            if not equal0(stateL):
-                if get_state:
-                    raise RuntimeError("Before cleaning up qubits system, "
-                                       "system should be reset.")
-                get_state = True
+        if Options.checkCleaningSystem:
+            get_state = False
+            for stateL in np.abs(self.statesNd.flat):
+                if not equal0(stateL):
+                    if get_state:
+                        raise RuntimeError("Before cleaning up qubits system, "
+                                           "system should be reset.")
+                    get_state = True
 
     @property
     def nQubits(self) -> int: return self.statesNd.ndim
@@ -147,7 +152,7 @@ class QubitsSystem:
             states[0, ...] = states[1, ...]
         states[0, ...] /= np.sqrt(sss(states[0, ...]))
         states[1, ...] *= 0.
-        if Options.allowTracking:
+        if self.canTrack():
             self._tracker.append(((), (idx,), "RESET"))
 
     def swap(self, idx0: int, idx1: int) -> None:
@@ -162,8 +167,6 @@ class QubitsSystem:
             self.statesNdIndex(idx0),
             self.statesNdIndex(idx1)
         )
-        if Options.allowTracking:
-            self._tracker.append(((), (idx0, idx1), "SWAP"))
 
     def apply(self, m: np.ndarray, idx: int, name: str = "") -> None:
         """把单量子位门应用到量子位上*
@@ -195,8 +198,32 @@ class QubitsSystem:
                            m[1, 1] * old_states.__getitem__(controlling1))
         if Options.autoNormalize:
             self.normalize()
-        if Options.allowTracking:
-            self._tracker.append((tuple(self._ctlBits), (idx,), name))
+        if self.canTrack():
+            self.addTrack(tuple(self._ctlBits), (idx,), name)
+
+    ##########################  Related to tracking  ##########################
+
+    def canTrack(self) -> bool:
+        """系统是否可以跟踪量子位操作
+
+        把属性stopTracking可以停止系统里的跟踪
+
+        Returns:
+            返回当前系统是否可以跟踪"""
+        return Options.allowTracking and not self.stopTracking
+
+    def addTrack(self, ctlIdxs: Iterable[int], idxs: Iterable[int],
+                 name: str) -> None:
+        """添加跟踪条目
+
+        调用此方法会无视任何条件, 给跟踪器加上条目. 正常使用应该要
+        先使用`canTrack()`判断是否可以跟踪再进行添加.
+
+        Args:
+            ctlIdxs: 控制位(一般都为空)
+            idxs: 被控制位 或 操作的作用位
+            name: 操作的名字"""
+        self._tracker.append((tuple(ctlIdxs), tuple(idxs), name))
 
     #########################  Related to measuring  ##########################
 
@@ -232,7 +259,7 @@ class QubitsSystem:
         choice = 0 if np.random.random() * (prob0 + prob1) <= prob0 else 1
         states[choice, ...] /= np.sqrt(sss(states[choice, ...]))
         states[1 - choice, ...] *= 0.
-        if Options.allowTracking:
+        if self.canTrack():
             self._tracker.append(((), (idx,), "MEASURE"))
         return choice
 

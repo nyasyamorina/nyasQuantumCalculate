@@ -39,6 +39,7 @@ print(result)               # 0 or 1
     *   量子位门通过 `__call__` 方法作用在量子位上, 如: `X(qb)`
     *   或使用方法 `ApplyToAll` 把单量子位们作用在 `Qubits` 里每个量子位上
     *   提供了 `Control` 方法, 实现可控过程
+    *   `QFT` 和 `IQFT` 如同位门一样直接作用在量子位上
 
 3.  测量系统
 
@@ -65,7 +66,7 @@ print(result)               # 0 or 1
 
 *   内置的方法好少, 使用好困难
 
-    目前这个库还是第一个版本, 仅仅确保了*可运行*, 日后会增加更多功能, 比如多量子位门, QFT等
+    目前这个库还是第一个版本, 仅仅确保了*可运行*, 日后会增加更多功能
 
 *   我可以跟别人分享这个库吗, 有什么限制
 
@@ -78,6 +79,8 @@ print(result)               # 0 or 1
 完全从`Cython`迁移到 `prue Python`+`numpy`, 使得代码结构具有层次, 容易修改和添加
 
 但这无疑牺牲了运行速度, 比如说, 自制测试用的[Grover算法](https://en.wikipedia.org/wiki/Grover%27s_algorithm), 在10qubits(加上临时量子位共16qubits)用时`~2.4s`.
+
+增加了 `QFT` 和 `IQFT`. 并更新了系统跟踪, 现在可以支持跟踪高级复杂操作的而不跟踪底层操作, 更多: `help(QubitsOperation)`
 
 ---
 

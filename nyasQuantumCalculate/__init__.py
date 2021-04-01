@@ -65,15 +65,3 @@ def ResetAll(qbs: Qubits) -> None:
         qbs: 需要重置的多个量子位"""
     for index in qbs.indexes:
         qbs.system.reset(index)
-
-
-def SWAP(q0: Qubit, q1: Qubit) -> None:
-    """交换量子位数据
-
-    量子数据可以移动但不可复制, 这里是直接交换两个量子位的数据. 两个
-    量子位必须处于相同的量子位系统.
-
-    Args"""
-    if q0.system.id != q1.system.id:
-        raise ValueError("两个量子位处于不同的量子位系统")
-    q0.system.swap(q0.index, q1.index)

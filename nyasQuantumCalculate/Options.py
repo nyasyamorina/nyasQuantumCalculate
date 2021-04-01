@@ -20,6 +20,8 @@ class _options:
         autoNormalize: 自动在作用位门后归一化系统 [default: True]
         allowTracking: 跟踪量子位系统的每一个操作 [default: False]
         reverseBitIndex: 翻转位索引, True时为从右到左 [default: True]
+        QFTwithNumpy: 使用numpy而不是位门实现QFT [default: True]
+        checkCleaningSystem: 清除系统时检查系统是否已被重置 [default: True]
 
     To use: (reverseBitIndex)
     >>> qbsys = QubitsSystem(2)
@@ -39,6 +41,8 @@ class _options:
         self.autoNormalize = True
         self.allowTracking = False
         self.reverseBitIndex = True
+        self.QFTwithNumpy = True
+        self.checkCleaningSystem = True
 
 
 Options = _options()
@@ -86,3 +90,11 @@ class TemporaryOptions:
     @staticmethod
     def reverseBitIndex(after: bool) -> TempOption:
         return TempOption("reverseBitIndex", after)
+
+    @staticmethod
+    def QFTwithNumpy(after: bool) -> TempOption:
+        return TempOption("QFTwithNumpy", after)
+
+    @staticmethod
+    def checkCleaningSystem(after: bool) -> TempOption:
+        return TempOption("checkCleaningSystem", after)
