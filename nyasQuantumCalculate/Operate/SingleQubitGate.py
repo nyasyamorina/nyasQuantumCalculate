@@ -67,8 +67,40 @@ class SingleQubitGate(QubitsOperation):
         (a, b), (c, d) = self.matrix
         return f"{self.name}[{a:.2f} {b:.2f}; {c:.2f} {d:.2f}]"
 
-    def __call__(self, q: Qubit) -> None:
-        q.system.apply(self.matrix, q.index, self.name)
+    def call(self, qb: Qubit) -> None:
+        qbsys = qb.system
+        m = self.matrix
+        controlling0 = (0, ..., *([1] * len(qbsys.ctlBits)))
+        controlling1 = (1, ..., *([1] * len(qbsys.ctlBits)))
+        states = qbsys.statesNd.swapaxes(0, qbsys.statesNdIndex(qb.index))
+        new0 = states.__getitem__(controlling0).copy()
+        if m[0, 1] == 0.:
+            new0 *= m[0, 0]
+        else:
+            new0 *= m[0, 0] / m[0, 1]
+            new0 += states.__getitem__(controlling1)
+            new0 *= m[0, 1]
+        new1 = states.__getitem__(controlling0).copy()
+        if m[1, 1] == 0.:
+            new1 *= m[1, 0]
+        else:
+            new1 *= m[1, 0] / m[1, 1]
+            new1 += states.__getitem__(controlling1)
+            new1 *= m[1, 1]
+        states.__setitem__(controlling0, new0)
+        states.__setitem__(controlling1, new1)
+        if Options.autoNormalize:
+            qbsys.normalize()
+
+    def __call__(self, qb: Qubit) -> None:
+        qbsys = qb.system
+        sysStopTrack = qbsys.stopTracking
+        if qbsys.canTrack() and self.trackable:
+            qbsys.addTrack(tuple(qbsys.ctlBits), (qb.index,), self.name)
+            qbsys.stopTracking = True
+        self.call(qb)
+        if not sysStopTrack:
+            qbsys.stopTracking = False
 
     def __imul__(self, s: complex) -> "SingleQubitGate":
         assert equal0(np.abs(s) - 1.)

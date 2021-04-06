@@ -32,18 +32,23 @@ class _SWAP(QubitsOperation):
         self.trackable = True
 
     def call(self, q0: Qubit, q1: Qubit) -> None:
-        q0.system.swap(q0.index, q1.index)
+        qbsys = q0.system
+        qbsys.statesNd = qbsys.statesNd.swapaxes(
+            qbsys.statesNdIndex(q0.index),
+            qbsys.statesNdIndex(q1.index)
+        )
 
     def __call__(self, q0: Qubit, q1: Qubit) -> None:
         if q0.system.id != q1.system.id:
             raise ValueError("两个量子位处于不同的量子位系统")
-        sysStopTrack = q0.system.stopTracking
-        if q0.system.canTrack() and self.trackable:
-            q0.system.addTrack((), (q0.index, q1.index), self.name)
-            q0.system.stopTracking = True
+        qbsys = q0.system
+        sysStopTrack = qbsys.stopTracking
+        if qbsys.canTrack() and self.trackable:
+            qbsys.addTrack((), (q0.index, q1.index), self.name)
+            qbsys.stopTracking = True
         self.call(q0, q1)
         if not sysStopTrack:
-            q0.system.stopTracking = False
+            qbsys.stopTracking = False
 
 
 SWAP = _SWAP()

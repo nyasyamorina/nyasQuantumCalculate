@@ -47,7 +47,7 @@ class QubitsSystem:
         self.statesNd = np.zeros([2] * nQubits, np.complex128)
         self.statesNd.__setitem__((*([0] * nQubits),), 1.)
         self._id = id_manager.getID()
-        self._ctlBits: List[int] = list()
+        self.ctlBits: List[int] = list()
         self._qIndex = list(range(self.nQubits))
         self._qIndexR = list(range(self.nQubits))
         self._tracker: List[Tuple[Tuple[int, ...],
@@ -155,52 +155,6 @@ class QubitsSystem:
         if self.canTrack():
             self._tracker.append(((), (idx,), "RESET"))
 
-    def swap(self, idx0: int, idx1: int) -> None:
-        """交换两个量子位*
-
-        *请使用 `SWAP(qb0, qb1)` 来交换量子位.
-
-        Args:
-            idx0: 量子位的索引, 应该从0开始到nQubits-1
-            idx1: 量子位的索引, 应该从0开始到nQubits-1"""
-        self.statesNd = self.statesNd.swapaxes(
-            self.statesNdIndex(idx0),
-            self.statesNdIndex(idx1)
-        )
-
-    def apply(self, m: np.ndarray, idx: int, name: str = "") -> None:
-        """把单量子位门应用到量子位上*
-
-        当self.controlBits存在时, 位门变为控制位门. 并且
-        被应用位门的量子位不能是被控制位.
-
-        *请使用 `U(qb)` 来应用位门, U为单量子位门.
-
-        Args:
-            m: 2x2复矩阵
-            idx: 量子位的索引, 应该从0开始到nQubits-1
-            name: 位门的名字, 用于记录步骤
-        """
-        if m.shape != (2, 2):
-            raise ValueError(f"m的形状应该为(2,2), 而不是{m.shape}.")
-        if idx in self._ctlBits:
-            raise ValueError("被作用门作用的Qubit不能是控制位.")
-        states = self.statesNd.swapaxes(0, self.statesNdIndex(idx))
-        old_states = states.copy()
-        # python 3.10 以上不再支持在索引里解包了
-        controlling0 = (0, ..., *([1] * len(self._ctlBits)))
-        controlling1 = (1, ..., *([1] * len(self._ctlBits)))
-        states.__setitem__(controlling0,
-                           m[0, 0] * old_states.__getitem__(controlling0) +
-                           m[0, 1] * old_states.__getitem__(controlling1))
-        states.__setitem__(controlling1,
-                           m[1, 0] * old_states.__getitem__(controlling0) +
-                           m[1, 1] * old_states.__getitem__(controlling1))
-        if Options.autoNormalize:
-            self.normalize()
-        if self.canTrack():
-            self.addTrack(tuple(self._ctlBits), (idx,), name)
-
     ##########################  Related to tracking  ##########################
 
     def canTrack(self) -> bool:
@@ -275,7 +229,7 @@ class QubitsSystem:
             return False
         if not all(idx0 == idx1
                    for idx0, idx1 in
-                   zip(self._ctlBits, self._qIndexR[-len(self._ctlBits):])):
+                   zip(self.ctlBits, self._qIndexR[-len(self.ctlBits):])):
             return False
         for (idx0, idxx0), (idx1, idxx1) in zip(
             enumerate(self._qIndex),
@@ -301,7 +255,7 @@ class QubitsSystem:
             索引"""
         if not 0 <= idx < self.nQubits:
             raise ValueError(f"索引为 {idx} 的量子位不存在")
-        if not self._ctlBits:
+        if not self.ctlBits:
             return idx
         if reverse:
             return self._qIndexR[idx]
@@ -317,30 +271,30 @@ class QubitsSystem:
 
         Args:
             idxs: 量子位的索引, 应该从0开始到nQubits-1"""
-        if self._ctlBits:
+        if self.ctlBits:
             raise RuntimeError("Before setting control qubit, "
                                "previous ones should be removed.")
         if not all(0 <= index < self.nQubits for index in idxs):
             raise ValueError("输入参数内有超出范围的索引")
         if len(idxs) >= self.nQubits:
             raise ValueError("控制位太多了, 以至于无法执行位门操作")
-        self._ctlBits = list(idxs)
-        self._ctlBits.sort()
+        self.ctlBits = list(idxs)
+        self.ctlBits.sort()
         self._qIndexR = [index for index in range(self.nQubits)
-                         if index not in self._ctlBits]
-        self._qIndexR += self._ctlBits
+                         if index not in self.ctlBits]
+        self._qIndexR += self.ctlBits
         for index0, index1 in enumerate(self._qIndexR):
             self._qIndex[index1] = index0
         self.statesNd = self.statesNd.transpose(self._qIndexR)
 
     def removeControllingQubits(self) -> None:
         """移除控制位"""
-        if not self._ctlBits:
+        if not self.ctlBits:
             return
         self.statesNd = self.statesNd.transpose(self._qIndex)
         self._qIndex = list(range(self.nQubits))
         self._qIndexR = list(range(self.nQubits))
-        self._ctlBits = list()
+        self.ctlBits = list()
 
     #####################  Related to temporary qubit  ########################
 
@@ -355,16 +309,16 @@ class QubitsSystem:
             nQubits: 新增量子位的数量"""
         isControlling = False
         controlBits: List[int] = list()
-        if self._ctlBits:
+        if self.ctlBits:
             isControlling = True
-            controlBits = self._ctlBits
+            controlBits = self.ctlBits
             self.removeControllingQubits()
         new_states = np.zeros([2] * (self.nQubits + nQubits), np.complex128)
         new_states.__setitem__((..., *([0] * nQubits)), self.statesNd)
+        self.statesNd = new_states
         extra_indexes = list(range(self.nQubits, self.nQubits + nQubits))
         self._qIndex += extra_indexes
         self._qIndexR += extra_indexes
-        self.statesNd = new_states
         if isControlling:
             self.setControllingQubits(*controlBits)
 
@@ -377,9 +331,9 @@ class QubitsSystem:
             nQubits: 移除量子位的数量"""
         isControlling = False
         controlBits: List[int] = list()
-        if self._ctlBits:
+        if self.ctlBits:
             isControlling = True
-            controlBits = self._ctlBits
+            controlBits = self.ctlBits
             self.removeControllingQubits()
         for index in range(self.nQubits - nQubits, self.nQubits):
             self.reset(index)

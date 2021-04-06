@@ -158,7 +158,6 @@ class RandomFunQ(UnknownFunctionQuantum):
     def __call__(self, qbs: Qubits) -> None:
         n = len(qbs)
         choice = np.random.choice(1 << n, 1 << (n - 1), False)
-        print(choice)
         with TemporaryQubit(qbs.system) as tmQ:
             # 使用了所谓的"相位反冲技巧"
             X(tmQ)
@@ -176,16 +175,16 @@ def DeutscheJozsaQuantum(totalBits: int,
     # 如果func为常数函数则返回True, 否则为False
     sytm = QubitsSystem(totalBits)
     qubits: Qubits = sytm[:]
-    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
+    #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     ApplyToEach(H, qubits)
-    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
+    #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     func(qubits)
-    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
+    #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     ApplyToEach(H, qubits)
-    DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
+    #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     result = MeasureAll(qubits)
     ResetAll(qubits)

@@ -11,8 +11,8 @@ __all__ = ["ApplyToEach", "ApplyFromBools", "ApplyFromInt"]
 
 def ApplyToEach(gate: SingleQubitGate, qbs: Qubits) -> None:
     """把单量子位门作用到qbs的每个量子位上"""
-    for index in qbs.indexes:
-        qbs.system.apply(gate.matrix, index, gate.name)
+    for qb in qbs:
+        gate(qb)
 
 
 def ApplyFromBools(gate: SingleQubitGate, bools: Iterable[bool],
@@ -29,7 +29,7 @@ def ApplyFromBools(gate: SingleQubitGate, bools: Iterable[bool],
         flip: 是否翻转bools"""
     for b, qb in zip(bools, qbs):
         if b ^ flip:
-            qb.system.apply(gate.matrix, qb.index, gate.name)
+            gate(qb)
 
 
 def ApplyFromInt(gate: SingleQubitGate, integer: int, qbs: Qubits) -> None:
