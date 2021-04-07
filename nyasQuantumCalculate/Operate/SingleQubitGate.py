@@ -10,8 +10,8 @@ from nyasQuantumCalculate.Utils import *
 from nyasQuantumCalculate.System import *
 
 
-__all__ = ["SingleQubitGate", 'I', 'H', 'X', 'Y', 'Z', 'S', 'T', "SReverse",
-           "TReverse", "Rx", "Ry", "Rz", "R1"]
+__all__ = ["SingleQubitGate", 'I', 'H', 'X', 'Y', 'Z', 'S', 'T', "SR",
+           "TR", "Rx", "Ry", "Rz", "R1"]
 
 
 class SingleQubitGate(QubitsOperation):
@@ -25,13 +25,14 @@ class SingleQubitGate(QubitsOperation):
     Attributes:
         matrix: 单量子位门里的矩阵
     """
+
     def __init__(self,
                  a: complex, b: complex,
                  c: complex, d: complex,
                  name: str = "",
                  **kwargs: Any) -> None:
         if not kwargs.get("_notCheck", False) and \
-            not self.checkUnitGate(a, b, c, d):
+                not self.checkUnitGate(a, b, c, d):
             raise ValueError("输入参数不能构造单量子位门")
         super().__init__()
         self.name = name
@@ -70,8 +71,8 @@ class SingleQubitGate(QubitsOperation):
     def call(self, qb: Qubit) -> None:
         qbsys = qb.system
         m = self.matrix
-        controlling0 = (0, ..., *([1] * len(qbsys.ctlBits)))
-        controlling1 = (1, ..., *([1] * len(qbsys.ctlBits)))
+        controlling0 = (0, ..., *([1] * qbsys.nControllingQubits))
+        controlling1 = (1, ..., *([1] * qbsys.nControllingQubits))
         states = qbsys.statesNd.swapaxes(0, qbsys.statesNdIndex(qb.index))
         new0 = states.__getitem__(controlling0).copy()
         if m[0, 1] == 0.:
@@ -96,7 +97,7 @@ class SingleQubitGate(QubitsOperation):
         qbsys = qb.system
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:
-            qbsys.addTrack(tuple(qbsys.ctlBits), (qb.index,), self.name)
+            qbsys.addTrack(self.name, qb.index)
             qbsys.stopTracking = True
         self.call(qb)
         if not sysStopTrack:
@@ -149,14 +150,14 @@ Z = SingleQubitGate(1., 0., 0., -1., _notCheck=True,
 S = SingleQubitGate(1., 0., 0., 1.j, _notCheck=True,
                     name='S', controllable=True, canTracked=True)
 
-SReverse = SingleQubitGate(1., 0., 0., -1.j, _notCheck=True,
-                           name='S^-1', controllable=True, canTracked=True)
+SR = SingleQubitGate(1., 0., 0., -1.j, _notCheck=True,
+                     name='S^-1', controllable=True, canTracked=True)
 
 T = SingleQubitGate(1., 0., 0., rsqrt2 + 1j*rsqrt2, _notCheck=True,
                     name='T', controllable=True, canTracked=True)
 
-TReverse = SingleQubitGate(1., 0., 0., rsqrt2 - 1j*rsqrt2, _notCheck=True,
-                           name='T^-1', controllable=True, canTracked=True)
+TR = SingleQubitGate(1., 0., 0., rsqrt2 - 1j*rsqrt2, _notCheck=True,
+                     name='T^-1', controllable=True, canTracked=True)
 
 
 def Rx(theta: float) -> SingleQubitGate:

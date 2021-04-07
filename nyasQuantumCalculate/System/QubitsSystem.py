@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Iterable, List, Literal, Tuple, Union, Any
+from typing import List, Literal, Tuple, Union, Any
 
 import numpy as np
 
@@ -47,7 +47,8 @@ class QubitsSystem:
         self.statesNd = np.zeros([2] * nQubits, np.complex128)
         self.statesNd.__setitem__((*([0] * nQubits),), 1.)
         self._id = id_manager.getID()
-        self.ctlBits: List[int] = list()
+        self._ctlBits: List[int] = list()
+        self._ctlBitPkgs: List[List[int]] = list()
         self._qIndex = list(range(self.nQubits))
         self._qIndexR = list(range(self.nQubits))
         self._tracker: List[Tuple[Tuple[int, ...],
@@ -67,6 +68,9 @@ class QubitsSystem:
 
     @property
     def nQubits(self) -> int: return self.statesNd.ndim
+
+    @property
+    def nControllingQubits(self) -> int: return len(self._ctlBits)
 
     @property
     def id(self) -> int: return self._id
@@ -132,6 +136,28 @@ class QubitsSystem:
 
     # TODO def isEntangled(self, idx: int) -> bool:
 
+    ##########################  Related to tracking  ##########################
+
+    def canTrack(self) -> bool:
+        """系统是否可以跟踪量子位操作
+
+        把属性stopTracking可以停止系统里的跟踪
+
+        Returns:
+            返回当前系统是否可以跟踪"""
+        return Options.allowTracking and not self.stopTracking
+
+    def addTrack(self, name: str, *idxs: int) -> None:
+        """添加跟踪条目
+
+        调用此方法会无视任何条件, 给跟踪器加上条目. 正常使用应该要
+        先使用`canTrack()`判断是否可以跟踪再进行添加.
+
+        Args:
+            name: 操作的名字
+            idxs: 被控制位 或 操作的作用位"""
+        self._tracker.append((tuple(self._ctlBits), tuple(idxs), name))
+
     ###########################################################################
     ################## * 一般情况下, 你不应该调用以下方法  #######################
     ###########################################################################
@@ -154,30 +180,6 @@ class QubitsSystem:
         states[1, ...] *= 0.
         if self.canTrack():
             self._tracker.append(((), (idx,), "RESET"))
-
-    ##########################  Related to tracking  ##########################
-
-    def canTrack(self) -> bool:
-        """系统是否可以跟踪量子位操作
-
-        把属性stopTracking可以停止系统里的跟踪
-
-        Returns:
-            返回当前系统是否可以跟踪"""
-        return Options.allowTracking and not self.stopTracking
-
-    def addTrack(self, ctlIdxs: Iterable[int], idxs: Iterable[int],
-                 name: str) -> None:
-        """添加跟踪条目
-
-        调用此方法会无视任何条件, 给跟踪器加上条目. 正常使用应该要
-        先使用`canTrack()`判断是否可以跟踪再进行添加.
-
-        Args:
-            ctlIdxs: 控制位(一般都为空)
-            idxs: 被控制位 或 操作的作用位
-            name: 操作的名字"""
-        self._tracker.append((tuple(ctlIdxs), tuple(idxs), name))
 
     #########################  Related to measuring  ##########################
 
@@ -229,7 +231,7 @@ class QubitsSystem:
             return False
         if not all(idx0 == idx1
                    for idx0, idx1 in
-                   zip(self.ctlBits, self._qIndexR[-len(self.ctlBits):])):
+                   zip(self._ctlBits, self._qIndexR[-len(self._ctlBits):])):
             return False
         for (idx0, idxx0), (idx1, idxx1) in zip(
             enumerate(self._qIndex),
@@ -255,46 +257,69 @@ class QubitsSystem:
             索引"""
         if not 0 <= idx < self.nQubits:
             raise ValueError(f"索引为 {idx} 的量子位不存在")
-        if not self.ctlBits:
+        if not self._ctlBits:
             return idx
         if reverse:
             return self._qIndexR[idx]
         return self._qIndex[idx]
 
-    def setControllingQubits(self, *idxs: int) -> None:
-        """设置控制位*
+    def addControllingQubits(self, *idxs: int) -> None:
+        """增加一组控制位*
 
-        在设置控制位后, 作用在量子位上的位门全部会变为控制位门. 在
-        设置控制位之前必须先移除之前的控制位
+        用于多重控制的情况, 新增控制位不可以与已有控制位相同, 使用
+        popControllingQubiys()来取消控制位.
 
         *请使用 `Controlled(opr, ctlQbs, ...)` 来控制过程
 
         Args:
             idxs: 量子位的索引, 应该从0开始到nQubits-1"""
-        if self.ctlBits:
-            raise RuntimeError("Before setting control qubit, "
-                               "previous ones should be removed.")
-        if not all(0 <= index < self.nQubits for index in idxs):
-            raise ValueError("输入参数内有超出范围的索引")
-        if len(idxs) >= self.nQubits:
-            raise ValueError("控制位太多了, 以至于无法执行位门操作")
-        self.ctlBits = list(idxs)
-        self.ctlBits.sort()
+        if not idxs:
+            return
+        if any(idx in self._ctlBits for idx in idxs):
+            raise ValueError("控制位被重复添加")
+        self._ctlBitPkgs.append(list(idxs))
+        self.updateControllingQubits()
+
+    def popControllingQubits(self) -> None:
+        """删除一组控制位
+
+        删除最近添加的一组控制位"""
+        if not self._ctlBitPkgs:
+            return
+        self._ctlBitPkgs.pop()
+        self.updateControllingQubits()
+
+    def updateQuickIndex(self) -> None:
+        """更新快速索引
+
+        使用_ctlBits更新_qIndex和_qIndexR"""
+        if not self._ctlBitPkgs:
+            self._qIndex = list(range(self.nQubits))
+            self._qIndexR = list(range(self.nQubits))
+            return
         self._qIndexR = [index for index in range(self.nQubits)
-                         if index not in self.ctlBits]
-        self._qIndexR += self.ctlBits
+                         if index not in self._ctlBits]
+        self._qIndexR += self._ctlBits
+        if len(self._qIndex) != self.nQubits:
+            self._qIndex = list(range(self.nQubits))
         for index0, index1 in enumerate(self._qIndexR):
             self._qIndex[index1] = index0
-        self.statesNd = self.statesNd.transpose(self._qIndexR)
 
-    def removeControllingQubits(self) -> None:
-        """移除控制位"""
-        if not self.ctlBits:
+    def updateControllingQubits(self) -> None:
+        """更新控制位
+
+        使用_ctlBitPkgs来更新_ctlBits"""
+        if self._ctlBits:
+            self.statesNd = self.statesNd.transpose(self._qIndex)
+        self._ctlBits = list()
+        if not self._ctlBitPkgs:
+            self.updateQuickIndex()
             return
-        self.statesNd = self.statesNd.transpose(self._qIndex)
-        self._qIndex = list(range(self.nQubits))
-        self._qIndexR = list(range(self.nQubits))
-        self.ctlBits = list()
+        for pkg in self._ctlBitPkgs:
+            self._ctlBits += pkg
+        self._ctlBits.sort()
+        self.updateQuickIndex()
+        self.statesNd = self.statesNd.transpose(self._qIndexR)
 
     #####################  Related to temporary qubit  ########################
 
@@ -307,40 +332,33 @@ class QubitsSystem:
 
         Args:
             nQubits: 新增量子位的数量"""
-        isControlling = False
-        controlBits: List[int] = list()
-        if self.ctlBits:
-            isControlling = True
-            controlBits = self.ctlBits
-            self.removeControllingQubits()
+        if self._ctlBits:
+            self.statesNd = self.statesNd.transpose(self._qIndex)
         new_states = np.zeros([2] * (self.nQubits + nQubits), np.complex128)
         new_states.__setitem__((..., *([0] * nQubits)), self.statesNd)
         self.statesNd = new_states
-        extra_indexes = list(range(self.nQubits, self.nQubits + nQubits))
-        self._qIndex += extra_indexes
-        self._qIndexR += extra_indexes
-        if isControlling:
-            self.setControllingQubits(*controlBits)
+        self.updateQuickIndex()
+        if self._ctlBits:
+            self.statesNd = self.statesNd.transpose(self._qIndexR)
 
     def popQubit(self, nQubits: int = 1) -> None:
         """移除量子位
 
-        移除系统末端的nQubits个量子位, 量子位在被移除前会被重置
+        移除系统末端的nQubits个量子位, 量子位在被移除前会被重置, 确保
+        被移除的量子位不是控制位
 
         Args:
             nQubits: 移除量子位的数量"""
-        isControlling = False
-        controlBits: List[int] = list()
-        if self.ctlBits:
-            isControlling = True
-            controlBits = self.ctlBits
-            self.removeControllingQubits()
-        for index in range(self.nQubits - nQubits, self.nQubits):
+        afterPop = self.nQubits - nQubits
+        if any(idx >= afterPop for idx in self._ctlBits):
+            raise ValueError("被移除的量子位是控制位")
+        if self._ctlBits:
+            self.statesNd = self.statesNd.transpose(self._qIndex)
+        for index in range(afterPop, self.nQubits):
             self.reset(index)
         self.statesNd = self.statesNd.__getitem__(
             (..., *([0] * nQubits))
         ).copy()
-        self._qIndex = self._qIndex[:self.nQubits]
-        self._qIndexR = self._qIndexR[:self.nQubits]
-        if isControlling:
-            self.setControllingQubits(*controlBits)
+        self.updateQuickIndex()
+        if self._ctlBits:
+            self.statesNd = self.statesNd.transpose(self._qIndexR)

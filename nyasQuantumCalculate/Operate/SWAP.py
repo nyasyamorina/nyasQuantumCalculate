@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from .QubitsOperation import *
 from nyasQuantumCalculate.System import *
 
@@ -44,7 +46,7 @@ class _SWAP(QubitsOperation):
         qbsys = q0.system
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:
-            qbsys.addTrack((), (q0.index, q1.index), self.name)
+            qbsys.addTrack(self.name, q0.index, q1.index)
             qbsys.stopTracking = True
         self.call(q0, q1)
         if not sysStopTrack:

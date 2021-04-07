@@ -2,8 +2,6 @@
 
 """用于控制库的一些默认行为
 
-这个包不会被显式引用
-
 see more: `help(Options)` or `help(TemporaryOptions)`
 """
 

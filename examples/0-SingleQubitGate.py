@@ -56,13 +56,13 @@ print("after pauli-X gate and T gate:")
 X(qubit)    # ∣0❭: 0, ∣1❭: 1
 T(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: .707+.707i
-TReverse(qubit); X(qubit)   # Reset
+TR(qubit); X(qubit)   # Reset
 
 print("after pauli-X gate and S gate:")
 X(qubit)  # ∣0❭: 0, ∣1❭: 1
 S(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: i
-SReverse(qubit); X(qubit)   # Reset
+SR(qubit); X(qubit)   # Reset
 
 
 # Rotation Gates

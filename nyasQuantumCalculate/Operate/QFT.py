@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 
 from .QubitsOperation import *
@@ -121,7 +123,7 @@ class _QFT(QubitsOperation):
     def __call__(self, qbs: Qubits) -> None:
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
-            qbs.system.addTrack((), qbs.indexes, self.name)
+            qbs.system.addTrack(self.name, *qbs.indexes)
             qbs.system.stopTracking = True
         self.call(qbs)
         if not sysStopTrack:
@@ -143,7 +145,7 @@ class _iQFT(QubitsOperation):
     def __call__(self, qbs: Qubits) -> None:
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
-            qbs.system.addTrack((), qbs.indexes, self.name)
+            qbs.system.addTrack(self.name, *qbs.indexes)
             qbs.system.stopTracking = True
         self.call(qbs)
         if not sysStopTrack:

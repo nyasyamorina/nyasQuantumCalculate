@@ -26,9 +26,9 @@ def Controlled(opr: OperationLike, ctlQbs: Qubits,
     operation = QubitsOperation.getOperation(opr)
     if not operation.controllable:
         raise ValueError("目标过程不是可控的")
-    ctlQbs.system.setControllingQubits(*ctlQbs.indexes)
+    ctlQbs.system.addControllingQubits(*ctlQbs.indexes)
     result = operation(*args, **kwargs)
-    ctlQbs.system.removeControllingQubits()
+    ctlQbs.system.popControllingQubits()
     return result
 
 
@@ -64,20 +64,37 @@ def ControlledOnInt(opr: OperationLike, integer: int, ctlQbs: Qubits,
     return result
 
 
-def _cnot(q0: Qubit, q1: Qubit) -> None:
+class _CNOT(QubitsOperation):
     """CNOT门 (可逆XOR门)
 
     两个量子位必须处于相同的量子位系统.
 
     Args:
         q0: 控制位
-        q1: 被控制位"""
-    if q0.system.id != q1.system.id:
-        raise ValueError("两个量子位处于不同的量子位系统")
-    Controlled(X, q0.asQubits(), q1)
+        q1: 被控制位
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = "CNOT"
+        self.controllable = True
+
+    def call(self, q0: Qubit, q1: Qubit) -> None:
+        Controlled(X, q0.asQubits(), q1)
+
+    def __call__(self, q0: Qubit, q1: Qubit) -> None:
+        if q0.system.id != q1.system.id:
+            raise ValueError("两个量子位处于不同的量子位系统")
+        qbsys = q0.system
+        sysStopTrack = qbsys.stopTracking
+        if qbsys.canTrack() and self.trackable:
+            qbsys.addTrack(self.name, q0.index, q1.index)
+            qbsys.stopTracking = True
+        self.call(q0, q1)
+        if not sysStopTrack:
+            qbsys.stopTracking = False
 
 
-def Toffoli(q0: Qubit, q1: Qubit, q2: Qubit) -> None:
+class _CCNOT(QubitsOperation):
     """Toffoli门 (CCNOT门, 可逆AND门)
 
     三个量子位必须处于相同的量子位系统.
@@ -85,12 +102,31 @@ def Toffoli(q0: Qubit, q1: Qubit, q2: Qubit) -> None:
     Args:
         q0: 控制位
         q1: 控制位
-        q2: 被控制位"""
-    if q0.system.id != q1.system.id or \
-            q0.system.id != q2.system.id:
-        raise ValueError("三个量子位处于不同的量子位系统")
-    Controlled(X, q0 + q1, q2)
+        q2: 被控制位
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = "CCNOT"
+        self.controllable = True
+
+    def call(self, q0: Qubit, q1: Qubit, q2: Qubit) -> None:
+        Controlled(X, q0 + q1, q2)
+
+    def __call__(self, q0: Qubit, q1: Qubit, q2: Qubit) -> None:
+        if q0.system.id != q1.system.id or \
+                q0.system.id != q2.system.id:
+            raise ValueError("三个量子位处于不同的量子位系统")
+        qbsys = q0.system
+        sysStopTrack = qbsys.stopTracking
+        if qbsys.canTrack() and self.trackable:
+            qbsys.addTrack(self.name, q0.index, q1.index, q2.index)
+            qbsys.stopTracking = True
+        self.call(q0, q1, q2)
+        if not sysStopTrack:
+            qbsys.stopTracking = False
 
 
-CNOT = _cnot
-CCNOT = Toffoli
+CNOT = _CNOT()
+CCNOT = _CCNOT()
+Toffoli = CCNOT

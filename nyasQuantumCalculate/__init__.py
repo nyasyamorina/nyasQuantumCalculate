@@ -2,8 +2,9 @@
 
 from typing import List, Literal, Tuple
 
-from .System import *
 from .Operate import *
+from .System import *
+from .Options import *
 
 
 def Probability(qb: Qubit) -> Tuple[float, float]:
