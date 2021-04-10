@@ -146,7 +146,7 @@ j = round(pi / (4 * arcsin(sqrt(M / N))) - .5)
 qbsys = QubitsSystem(nColorBits * nVertex)
 register = qbsys.getQubits()
 
-# 这个result是不让编辑器提示result(165)不存在的, 并没有实际用途
+# 这个result是不让编辑器提示result(169)不存在的, 并没有实际用途
 result = MeasureAll(register)
 
 # 使用一个额外的量子位判断答案是否正确, 如果不正确则继续运行Grover算法
