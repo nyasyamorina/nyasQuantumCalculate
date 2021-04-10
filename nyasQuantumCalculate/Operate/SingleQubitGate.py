@@ -11,7 +11,7 @@ from nyasQuantumCalculate.System import *
 
 
 __all__ = ["SingleQubitGate", 'I', 'H', 'X', 'Y', 'Z', 'S', 'T', "SR",
-           "TR", "Rx", "Ry", "Rz", "R1"]
+           "TR", "Rx", "Ry", "Rz", "R1", "Phase"]
 
 
 class SingleQubitGate(QubitsOperation):
@@ -184,3 +184,9 @@ def Rz(theta: float) -> SingleQubitGate:
 def R1(theta: float) -> SingleQubitGate:
     return SingleQubitGate(1., 0., 0., np.exp(1j * theta), _notCheck=True,
                            name="R1", controllable=True, canTracked=True)
+
+
+def Phase(theta: float) -> SingleQubitGate:
+    ph = np.exp(1j * theta)
+    return SingleQubitGate(ph, 0., 0., ph, _notCheck=True,
+                           name="Ph", controllable=True, canTracked=True)

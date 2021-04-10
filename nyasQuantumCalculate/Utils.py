@@ -9,13 +9,14 @@ ColorWeel2RGB()
 TimeChunck
 """
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 from time import time
 
 import numpy as np
 
 
-__all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck"]
+__all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck",
+           "Bools2Int", "Int2Bools"]
 
 
 delta = 1e-8
@@ -92,3 +93,44 @@ class TimeChunck:
     def __exit__(self, _:Any, __: Any, ___: Any) -> None:
         totaltimer[self.name][0] += 1
         totaltimer[self.name][1] += time() - self.start
+
+
+def Bools2Int(l: Iterable[Union[Literal[0, 1], bool]]) -> int:
+    """把bit列表转为int
+
+    Args:
+        l: 可迭代的对象, 内部元素为bool或0,1
+
+    Returns:
+        把列表l的索引0作为整数的大端, 逐位排列组成的整数"""
+    res = 0
+    for ele in l:
+        res <<= 1
+        res |= int(ele)
+    return res
+
+
+def Int2Bools(x: int, n: Optional[int] = None) -> List[bool]:
+    """把int转为bit列表
+
+    Args:
+        x: 需要转化的整数, 必须大于等于0
+        n: 输出列表的长度, 默认为可以表示x的最短长度
+
+    Returns:
+        bool列表, 索引0为x的大端"""
+    if x < 0:
+        raise ValueError("负数不能转化为bools")
+    if n is None:
+        res: List[bool] = list()
+        while x > 0:
+            res.append(x & 1 == 1)
+            x >>= 1
+    else:
+        res: List[bool] = [False] * n
+        for i in range(n):
+            if x <= 0:
+                break
+            res[i] = x & 1 == 1
+            x >>= 1
+    return res[::-1]

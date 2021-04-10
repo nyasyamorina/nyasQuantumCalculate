@@ -4,6 +4,7 @@ from typing import Any
 
 from .QubitsOperation import *
 from .SingleQubitGate import *
+from nyasQuantumCalculate.Utils import *
 from nyasQuantumCalculate.System import *
 
 
@@ -48,12 +49,7 @@ def ControlledOnInt(opr: OperationLike, integer: int, ctlQbs: Qubits,
     Returns:
         opr返回的值
     """
-    bits = [False] * len(ctlQbs)
-    for index in range(len(ctlQbs)):
-        if integer == 0:
-            break
-        bits[index] = integer & 1 == 1      # integer % 2 == 1
-        integer >>= 1
+    bits = Int2Bools(integer, len(ctlQbs))
     for bit, qubit in zip(bits, ctlQbs):
         if not bit:
             X(qubit)

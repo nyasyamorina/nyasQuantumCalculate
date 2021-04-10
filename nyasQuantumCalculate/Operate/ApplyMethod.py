@@ -3,6 +3,7 @@
 from typing import Iterable
 
 from .SingleQubitGate import *
+from nyasQuantumCalculate.Utils import *
 from nyasQuantumCalculate.System import *
 
 
@@ -41,10 +42,5 @@ def ApplyFromInt(gate: SingleQubitGate, integer: int, qbs: Qubits) -> None:
         gate: 需要作用的单量子位门
         integer: 控制用的整数
         qbs: 多个量子位"""
-    bits = [False] * len(qbs)
-    for index in range(len(qbs)):
-        if integer == 0:
-            break
-        bits[index] = integer & 1 == 1      # integer % 2 == 1
-        integer >>= 1                       # integer // 2
+    bits = Int2Bools(integer, len(qbs))
     ApplyFromBools(gate, bits, qbs, False)
