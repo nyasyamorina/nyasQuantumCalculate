@@ -134,7 +134,7 @@ class Constant0Q(UnknownFunctionQuantum):
 
 class Constant1Q(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
-        self.reversStateGate = I * -1
+        self.reversStateGate = -1. * Builtin.I
     def __call__(self, qbs: Qubits) -> None:
         self.reversStateGate(qbs[0])
 
@@ -145,13 +145,13 @@ class IfNthBitQ(UnknownFunctionQuantum):
     def __call__(self, qbs: Qubits) -> None:
         if self.n >= len(qbs):
             return
-        Z(qbs[self.n])
+        Builtin.Z(qbs[self.n])
 
 class Even1BitsQ(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
         pass
     def __call__(self, qbs: Qubits) -> None:
-        ApplyToEach(Z, qbs)
+        ApplyToEach(Builtin.Z, qbs)
 
 class RandomFunQ(UnknownFunctionQuantum):
     def __init__(self, n: int) -> None:
@@ -161,12 +161,12 @@ class RandomFunQ(UnknownFunctionQuantum):
         choice = np.random.choice(1 << n, 1 << (n - 1), False)
         with TemporaryQubit(qbs.system) as tmQ:
             # 使用了所谓的"相位反冲技巧"
-            X(tmQ)
-            H(tmQ)
+            Builtin.X(tmQ)
+            Builtin.H(tmQ)
             for integer in choice:
-                ControlledOnInt(X, integer, qbs, tmQ)
-            H(tmQ)
-            X(tmQ)
+                ControlledOnInt(Builtin.X, integer, qbs, tmQ)
+            Builtin.H(tmQ)
+            Builtin.X(tmQ)
 
 
 #################  算法本体
@@ -178,20 +178,20 @@ def DeutscheJozsaQuantum(totalBits: int,
     qubits: Qubits = sytm[:]
     #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
-    ApplyToEach(H, qubits)
+    ApplyToEach(Builtin.H, qubits)
     #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
     func(qubits)
     #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
-    ApplyToEach(H, qubits)
+    ApplyToEach(Builtin.H, qubits)
     #DumpSystemFig(sytm) if have_matplotlib else DumpSystemText(sytm)
 
-    result = MeasureAll(qubits)
-    ResetAll(qubits)
+    result = Builtin.MA(qubits)
+    Builtin.RA(qubits)
     return not any(result)
 
-print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, IfNthBitQ(3))}")
+print(f"Is constant function?(Q): {DeutscheJozsaQuantum(5, Constant1Q(3))}")
 # 可以自己尝试调一下数据试着运行
 
 

@@ -33,14 +33,18 @@ def ApplyFromBools(gate: SingleQubitGate, bools: Iterable[bool],
             gate(qb)
 
 
-def ApplyFromInt(gate: SingleQubitGate, integer: int, qbs: Qubits) -> None:
+def ApplyFromInt(gate: SingleQubitGate, integer: int,
+                 qbs: Qubits, reverse: bool = False) -> None:
     """使用int控制单量子位门
 
-    如同`ApplyFromBools`差不多, 但bool列表自动从integer里推导, 且flip为False
+    如同`ApplyFromBools`差不多, 但bool列表从integer里推导, 且flip为False.
+    默认在qbs第1个量子位对应integer高位, 最后1个量子位对应低位.
+    设置reverse为True可以翻转顺序.
 
     Args:
         gate: 需要作用的单量子位门
         integer: 控制用的整数
-        qbs: 多个量子位"""
+        qbs: 多个量子位
+        reverse: 是否翻转integer序列"""
     bits = Int2Bools(integer, len(qbs))
-    ApplyFromBools(gate, bits, qbs, False)
+    ApplyFromBools(gate, bits[::-1] if reverse else bits, qbs, False)

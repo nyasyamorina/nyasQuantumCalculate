@@ -3,6 +3,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+from typing import List
+
 import numpy as np
 
 from nyasQuantumCalculate import *
@@ -36,7 +38,7 @@ def UnknownClassical(x: int) -> bool:
 
 def UnknownQuantum(qbs: Qubits):
     """提供给量子算法的接口"""
-    ApplyFromBools(Z, s, qbs)
+    ApplyFromBools(Builtin.Z, s, qbs)
 
 
 #################################  传统算法  ###################################
@@ -65,15 +67,15 @@ def mainQuantum():
     qbs = qbsys.getQubits()
 
     # BernsteinVazirani算法
-    ApplyToEach(H, qbs)
+    ApplyToEach(Builtin.H, qbs)
     UnknownQuantum(qbs)
-    ApplyToEach(H, qbs)
+    ApplyToEach(Builtin.H, qbs)
 
     # 测量并重设所有量子位
-    result = MeasureAll(qbs)
-    ResetAll(qbs)
+    result = Builtin.MA(qbs)
+    Builtin.RA(qbs)
 
     # 输出
-    print(f"bit string (Quantum): [{''.join(map(lambda i: str(i), result))}]")
+    print(f"bit string (Quantum): [{''.join(map(lambda b: '1' if b else '0', result))}]")
 
 mainQuantum()

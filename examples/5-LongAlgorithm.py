@@ -59,25 +59,25 @@ nVertex = max(max(edge) for edge in edges) + 1
 
 
 # 计算迭代Grover过程的数量
-M = 72                              # 正确答案的数量
-N = 2 ** (nColorBits * nVertex)     # 所有答案的数量
-theta = arcsin(sqrt(M / N))         # 均匀叠加态在相空间里的辐角
+m = 72                              # 正确答案的数量
+n = 2 ** (nColorBits * nVertex)     # 所有答案的数量
+theta = arcsin(sqrt(m / n))         # 均匀叠加态在相空间里的辐角
 j_op = int(pi / (4 * theta) - .5)   # Grover算法最少迭代次数
 J = j_op                            # Long算法里的可调参数, 这里选择运行最快的
 j = J + 1                           # Long算法迭代的次数
 # Long算法里对相位旋转的角度
 phi = 2 * arcsin(sin(pi / (4 * J + 6)) / sin(theta))
-R = R1(phi)                         # 相位旋转矩阵
+RO = R1(phi)                        # 相位旋转矩阵
 
 
 def ColorEquality(c0: Qubits, c1: Qubits, target: Qubit):
     for q0, q1 in zip(c0, c1):
-        CNOT(q0, q1)
-    ApplyToEach(X, c1)
-    Controlled(X, c1, target)
-    ApplyToEach(X, c1)
+        Builtin.CNOT(q0, q1)
+    ApplyToEach(Builtin.X, c1)
+    Controlled(Builtin.X, c1, target)
+    ApplyToEach(Builtin.X, c1)
     for q0, q1 in zip(c0, c1):
-        CNOT(q0, q1)
+        Builtin.CNOT(q0, q1)
 
 
 def ValidVertexColoring(register: Qubits, target: Qubit):
@@ -86,37 +86,37 @@ def ValidVertexColoring(register: Qubits, target: Qubit):
     with TemporaryQubits(register.system, len(edges)) as edgesResult:
         for (idx0, idx1), edgeResult in zip(edges, edgesResult):
             ColorEquality(colors[idx0], colors[idx1], edgeResult)
-        ApplyToEach(X, edgesResult)
+        ApplyToEach(Builtin.X, edgesResult)
         # target输入不再是|0❭-|1❭的相位反冲, 而是输入|1❭"相位偏移"(乱起的名字)
-        Controlled(R, edgesResult, target)
-        ApplyToEach(X, edgesResult)
+        Controlled(RO, edgesResult, target)
+        ApplyToEach(Builtin.X, edgesResult)
         for (idx0, idx1), edgeResult in zip(edges, edgesResult):
             ColorEquality(colors[idx0], colors[idx1], edgeResult)
 
 
 def LongSearch(f: Callable[[Qubits, Qubit], None],
                  register: Qubits, nIter: int):
-    ApplyToEach(H, register)
+    ApplyToEach(Builtin.H, register)
     with TemporaryQubit(register.system) as target:
         # "相位偏移"使用|1❭, 而不是|0❭-|1❭
-        X(target)
+        Builtin.X(target)
         for _ in range(nIter):
             f(register, target)
-            ApplyToEach(H, register)
-            ApplyToEach(X, register)
+            ApplyToEach(Builtin.H, register)
+            ApplyToEach(Builtin.X, register)
             # 偏移均值相位, 而不是翻转
-            Controlled(R, register[0:-1], register[-1])
-            ApplyToEach(X, register)
-            ApplyToEach(H, register)
-        X(target)
+            Controlled(RO, register[0:-1], register[-1])
+            ApplyToEach(Builtin.X, register)
+            ApplyToEach(Builtin.H, register)
+        Builtin.X(target)
 
 
 qbsys = QubitsSystem(nColorBits * nVertex)
 register = qbsys.getQubits()
 
 LongSearch(ValidVertexColoring, register, j)
-result = MeasureAll(register)
-ResetAll(register)
+result = Builtin.MA(register)
+Builtin.RA(register)
 
 for v in range(nVertex):
     print(f"Vertex {v} has color "

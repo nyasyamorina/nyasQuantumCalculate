@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Literal, Tuple, Union, Any
+from typing import List, Tuple, Union, Any
 
 import numpy as np
 
@@ -57,14 +57,12 @@ class QubitsSystem:
 
     def __del__(self) -> None:
         print(f"Cleaning up qubits system with id:{self._id} ...")
-        if Options.checkCleaningSystem:
-            get_state = False
-            for stateL in np.abs(self.statesNd.flat):
-                if not equal0(stateL):
-                    if get_state:
-                        raise RuntimeError("Before cleaning up qubits system, "
-                                           "system should be reset.")
-                    get_state = True
+        if Options.checkCleaningSystem and \
+                not equal0(np.abs(
+                    self.statesNd.__getitem__((*([0] * self.nQubits),))
+                ) - 1.):
+            raise RuntimeError("Before cleaning up qubits system, "
+                               "system should be reset.")
 
     @property
     def nQubits(self) -> int: return self.statesNd.ndim
@@ -134,6 +132,18 @@ class QubitsSystem:
             第1位"""
         return self._tracker
 
+    def restart(self) -> None:
+        self.statesNd = np.zeros([2] * self.nQubits, np.complex128)
+        self.statesNd.__setitem__((*([0] * self.nQubits),), 1.)
+        self._id = id_manager.getID()
+        self._ctlBits: List[int] = list()
+        self._ctlBitPkgs: List[List[int]] = list()
+        self._qIndex = list(range(self.nQubits))
+        self._qIndexR = list(range(self.nQubits))
+        self._tracker: List[Tuple[Tuple[int, ...],
+                                  Tuple[int, ...], str]] = list()
+        self.stopTracking = False
+
     # TODO def isEntangled(self, idx: int) -> bool:
 
     ##########################  Related to tracking  ##########################
@@ -161,63 +171,6 @@ class QubitsSystem:
     ###########################################################################
     ################## * 一般情况下, 你不应该调用以下方法  #######################
     ###########################################################################
-
-    def reset(self, idx: int) -> None:
-        """重置一个量子位*
-
-        注意量子位只能重置振幅而不能重置相位, 如果可能的话
-        请使用位门偏转相位再重置量子位.
-
-        *请使用 `Reset(qb)` 或 `ResetAll(qbs)` 来重置量子位.
-
-        Args:
-            idx: 量子位的索引, 应该从0开始到nQubits-1"""
-        states = self.statesNd.swapaxes(0, self.statesNdIndex(idx))
-        prob0 = sss(states[0, ...])
-        if equal0(prob0):
-            states[0, ...] = states[1, ...]
-        states[0, ...] /= np.sqrt(sss(states[0, ...]))
-        states[1, ...] *= 0.
-        if self.canTrack():
-            self._tracker.append(((), (idx,), "RESET"))
-
-    #########################  Related to measuring  ##########################
-
-    def probability(self, idx: int) -> Tuple[float, float]:
-        """量子位被测量时得到0或1的概率*
-
-        *请使用 `Probability(qb)` 来获得概率
-
-        Args:
-            idx: 量子位的索引, 应该从0开始到nQubits-1
-
-        Returns:
-            第0个元素为测量得到0的概率, 第1个元素为得到1的概率"""
-        states = self.statesNd.swapaxes(0, self.statesNdIndex(idx))
-        prob0 = sss(states[0, ...])
-        prob1 = sss(states[1, ...])
-        total = prob0 + prob1
-        return (prob0 / total, prob1 / total)
-
-    def measure(self, idx: int) -> Literal[0, 1]:
-        """测量量子位*
-
-        *请使用 `Measure(qb)` 或 `MeasureAll(qbs)` 来测量量子位.
-
-        Args:
-            idx: 量子位的索引, 应该从0开始到nQubits-1.
-
-        Returns:
-            当测量到0时返回0, 否则返回1."""
-        states = self.statesNd.swapaxes(0, self.statesNdIndex(idx))
-        prob0 = sss(states[0, ...])
-        prob1 = sss(states[1, ...])
-        choice = 0 if np.random.random() * (prob0 + prob1) <= prob0 else 1
-        states[choice, ...] /= np.sqrt(sss(states[choice, ...]))
-        states[1 - choice, ...] *= 0.
-        if self.canTrack():
-            self._tracker.append(((), (idx,), "MEASURE"))
-        return choice
 
     ####################  Related to controlling qubits  ######################
 
@@ -344,21 +297,21 @@ class QubitsSystem:
     def popQubit(self, nQubits: int = 1) -> None:
         """移除量子位
 
-        移除系统末端的nQubits个量子位, 量子位在被移除前会被重置, 确保
+        移除系统末端的nQubits个量子位, 量子位在被移除前需要被重置, 并且确保
         被移除的量子位不是控制位
 
         Args:
             nQubits: 移除量子位的数量"""
-        afterPop = self.nQubits - nQubits
-        if any(idx >= afterPop for idx in self._ctlBits):
+        if any(idx >= self.nQubits - nQubits for idx in self._ctlBits):
             raise ValueError("被移除的量子位是控制位")
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndex)
-        for index in range(afterPop, self.nQubits):
-            self.reset(index)
-        self.statesNd = self.statesNd.__getitem__(
-            (..., *([0] * nQubits))
-        ).copy()
+        states = self.statesNd.__getitem__((..., *([0] * nQubits)))
+        if not equal0(sss(states) - 1.):
+            if self._ctlBits:
+                self.statesNd = self.statesNd.transpose(self._qIndexR)
+            raise RuntimeError("被移除的量子位未重置")
+        self.statesNd = states.copy()
         self.updateQuickIndex()
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndexR)

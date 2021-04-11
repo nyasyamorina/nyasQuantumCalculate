@@ -5,8 +5,8 @@ from nyasQuantumCalculate import *
 
 qbsys = QubitsSystem(1)
 qubit = qbsys[0]
-H(qubit)
-result = Measure(qubit)
+Builtin.H(qubit)
+result = Builtin.M(qubit)
 print(result)               # 0 or 1
 ```
 
@@ -34,22 +34,22 @@ print(result)               # 0 or 1
 
 3.  量子位门
 
-    *   常用的量子位门 `I`, `H`, `X`, `Y`, `Z`, `S`, `T`, `SReverse`, `TReverse`, `CNOT`, `CCNOT`
-    *   使用 `Rx(float)`, `Ry(float)`, `Rz(float)`, `R1(float)` 可以获取旋转门
+    *   `Builtin`里有常用的量子位门 `I`, `H`, `X`, `Y`, `Z`, `S`, `T`, `SR`, `TR`, `CNOT`, `CCNOT`
+    *   使用 `Rx(float)`, `Ry(float)`, `Rz(float)`, `R1(float)`, `Phase(float)` 可以获取旋转门和相位门
     *   量子位门通过 `__call__` 方法作用在量子位上, 如: `X(qb)`
     *   或使用方法 `ApplyToAll` 把单量子位们作用在 `Qubits` 里每个量子位上
-    *   提供了 `Control` 方法, 实现可控过程
-    *   `QFT` 和 `IQFT` 如同位门一样直接作用在量子位上
+    *   提供了 `Controlled` 方法, 实现可控过程
+    *   `QFT` 和 `IQFT` 如同位门一样直接作用在多量子位上
 
 3.  测量系统
 
-    *   可以使用方法 `Measure` 测量`Qubit`, 并返回测量结果 (`0` 或 `1`)
-    *   或使用方法 `MeasureAll` 测量`Qubits`, 并返回包含测量结果的列表
+    *   可以使用方法 `Builtin.M` 测量`Qubit`, 并返回测量结果 (`False` 或 `True`)
+    *   或使用方法 `Builtin.MA` 测量`Qubits`, 并返回包含测量结果的列表
 
 4.  重置系统
 
-    *   使用方法 `Reset` 重置`Qubit`, 方法 `ResetAll` 重置`Qubits`
-    *   可以直接使用语句 `ResetAll(qbsys.getQubits())` 重置整个系统
+    *   使用方法 `Builtin.R` 重置`Qubit`, 方法 `Builtin.RA` 重置`Qubits`
+    *   可以直接使用语句 `Builtin.RA(qbsys.getQubits())` 重置整个系统
     *   退出程序或释放`QubitsSystem`实例前重置整个系统是好习惯
 
 ---
@@ -74,13 +74,19 @@ print(result)               # 0 or 1
 
 ---
 
-## 0.1.0
+### 0.1.0
 
-完全从`Cython`迁移到 `prue Python`+`numpy`, 使得代码结构具有层次, 容易修改和添加
-
-但这无疑牺牲了运行速度, 比如说, 自制测试用的[Grover算法](https://en.wikipedia.org/wiki/Grover%27s_algorithm), 在10qubits(加上临时量子位共16qubits)用时`~2.4s`.
+完全从`Cython`迁移到 `prue Python`+`numpy`, 使得代码结构具有层次, 容易修改和添加. 但这无疑牺牲了运行速度.
 
 增加了 `QFT` 和 `IQFT`. 并更新了系统跟踪, 现在可以支持跟踪高级复杂操作的而不跟踪底层操作, 更多: `help(QubitsOperation)`
+
+### 0.1.1
+
+减少了部分逻辑, 使某些功能更通用. 例如支持多重控制, 删除临时量子位前必须由用户重置而不是自动重置
+
+增加了内部库 `Builtin`, 内置的位门,测量,重置等操作都以`常量`收录在里面, 而不是直接暴露在表层
+
+重构了库之间的引用顺序, `Reset`, `Measure`, `ResetAll`, `MeasureAll` 已被 `Builtin.R`, `Builtin.RA`, `Builtin.M`, `Builtin.MA` 替代
 
 ---
 

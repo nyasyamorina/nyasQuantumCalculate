@@ -102,7 +102,7 @@ def Bools2Int(l: Iterable[Union[Literal[0, 1], bool]]) -> int:
         l: 可迭代的对象, 内部元素为bool或0,1
 
     Returns:
-        把列表l的索引0作为整数的大端, 逐位排列组成的整数"""
+        把列表l的第1个元素作为整数的高位, 逐位排列组成的整数"""
     res = 0
     for ele in l:
         res <<= 1
@@ -118,7 +118,7 @@ def Int2Bools(x: int, n: Optional[int] = None) -> List[bool]:
         n: 输出列表的长度, 默认为可以表示x的最短长度
 
     Returns:
-        bool列表, 索引0为x的大端"""
+        bool列表, 第1个为x的高位"""
     if x < 0:
         raise ValueError("负数不能转化为bools")
     if n is None:

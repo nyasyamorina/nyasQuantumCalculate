@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from .QubitsOperation import *
-from .SWAP import *
-from .SingleQubitGate import *
-from .ApplyMethod import *
-from .ControlMethod import *
 from .QFT import *
+from .Swap import *
+from .ControlMethod import *
+from .ApplyMethod import *
+from .Reset import *
+from .Measure import *
+from .SingleQubitGate import *
+from .QubitsOperation import *

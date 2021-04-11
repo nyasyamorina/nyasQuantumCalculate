@@ -3,7 +3,7 @@
 import numpy as np
 
 from .QubitsOperation import *
-from .SWAP import *
+from .Swap import *
 from .SingleQubitGate import *
 from .ControlMethod import *
 from nyasQuantumCalculate.Options import *

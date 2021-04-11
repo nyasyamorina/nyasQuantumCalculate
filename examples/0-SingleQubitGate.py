@@ -17,7 +17,7 @@ DumpSystemText(qubit.system)        # ∣0❭: 1, ∣1❭: 0
 # Identity Gate
 # I gate doing somthing looks like do nothing
 print("after Identity gate:")
-I(qubit)
+Builtin.I(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 1, ∣1❭: 0
 # Reset
 
@@ -25,45 +25,48 @@ DumpSystemText(qubit.system)        # ∣0❭: 1, ∣1❭: 0
 # Pauli Gates
 # X gate can reverse states ∣0❭ and ∣1❭
 print("after pauli-X gate:")
-X(qubit)
+Builtin.X(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: 1
-X(qubit)    # Reset
+Builtin.X(qubit)    # Reset
 
 # Y gate do similar thing as X gate, but on image number
 print("after pauli-Y gate:")
-Y(qubit)
+Builtin.Y(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: i
-Y(qubit)    # Reset
+Builtin.Y(qubit)    # Reset
 
 # Z gate will flip the phase of ∣1❭, but do nothing on ∣0❭
 print("after pauli-X gate and pauli-Z gate:")
-X(qubit)    # ∣0❭: 0, ∣1❭: 1
-Z(qubit)
+Builtin.X(qubit)    # ∣0❭: 0, ∣1❭: 1
+Builtin.Z(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: -1
-Z(qubit); X(qubit)  # Reset
+Builtin.Z(qubit)
+Builtin.X(qubit)  # Reset
 
 
 # Hadamard Gate
 # H gate will make qubit between ∣0❭ and ∣1❭
 print("after Hadamard gate:")
-H(qubit)
+Builtin.H(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: .707, ∣1❭: .707
-H(qubit)    # Reset
+Builtin.H(qubit)    # Reset
 
 
 # Pahse Shift Gates
 # T gate and S gate will shift phase of ∣1❭, but do nothing on ∣0❭
 print("after pauli-X gate and T gate:")
-X(qubit)    # ∣0❭: 0, ∣1❭: 1
-T(qubit)
+Builtin.X(qubit)    # ∣0❭: 0, ∣1❭: 1
+Builtin.T(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: .707+.707i
-TR(qubit); X(qubit)   # Reset
+Builtin.TR(qubit)
+Builtin.X(qubit)   # Reset
 
 print("after pauli-X gate and S gate:")
-X(qubit)  # ∣0❭: 0, ∣1❭: 1
-S(qubit)
+Builtin.X(qubit)  # ∣0❭: 0, ∣1❭: 1
+Builtin.S(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: i
-SR(qubit); X(qubit)   # Reset
+Builtin.SR(qubit)
+Builtin.X(qubit)   # Reset
 
 
 # Rotation Gates
@@ -87,11 +90,20 @@ DumpSystemText(qubit.system)        # ∣0❭: .866-.5i, ∣1❭: 0
 Rz(-angle)(qubit)   # Reset
 
 print("after pauli-X gate and Rotation-1 gate:")
-X(qubit)
+Builtin.X(qubit)
 R1(angle)(qubit)
 DumpSystemText(qubit.system)        # ∣0❭: 0, ∣1❭: .5+.866i
-R1(-angle)(qubit); X(qubit)     # Reset
+R1(-angle)(qubit)
+Builtin.X(qubit)     # Reset
+
+
+# Phase Gate
+# phase gate will shift global phase
+print("after Phase gate:")
+Phase(angle)(qubit)
+DumpSystemText(qubit.system)        # ∣0❭: .5+.866i, ∣1❭: 0
+Phase(-angle)(qubit)   # Reset
 
 
 # Exit
-ResetAll(sytm.getQubits())
+Builtin.RA(sytm.getQubits())

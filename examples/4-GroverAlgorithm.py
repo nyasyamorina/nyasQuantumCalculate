@@ -54,15 +54,15 @@ def ColorEquality(c0: Qubits, c1: Qubits, target: Qubit):
     """计算输入的两种颜色是否相同, 如果相同则翻转target的状态, 否则什么也不做"""
     # 把c0和c1按位做异或, 并把结果储存在c1
     for q0, q1 in zip(c0, c1):
-        CNOT(q0, q1)
+        Builtin.CNOT(q0, q1)
     # 如果c1全部为0, 则c0与c1相同, 此时翻转target的状态
-    ApplyToEach(X, c1)
-    Controlled(X, c1, target)
+    ApplyToEach(Builtin.X, c1)
+    Controlled(Builtin.X, c1, target)
 
     # 因为作为数据位的c1被修改了, 在退出前需要还原c1的数据
-    ApplyToEach(X, c1)
+    ApplyToEach(Builtin.X, c1)
     for q0, q1 in zip(c0, c1):
-        CNOT(q0, q1)
+        Builtin.CNOT(q0, q1)
 
 
 def ValidVertexColoring(register: Qubits, target: Qubit):
@@ -80,12 +80,12 @@ def ValidVertexColoring(register: Qubits, target: Qubit):
             ColorEquality(colors[idx0], colors[idx1], edgeResult)
         # 如果edgesResult的结果全部为|0❭, 则证明全部边上不存在相同的颜色,
         # 这时候colors的着色为解, 则翻转target
-        ApplyToEach(X, edgesResult)
-        Controlled(X, edgesResult, target)
+        ApplyToEach(Builtin.X, edgesResult)
+        Controlled(Builtin.X, edgesResult, target)
 
         # 尽管在退出with时会自动重置edgesResult,
         # 但是手动还原为原本的状态是良好的习惯
-        ApplyToEach(X, edgesResult)
+        ApplyToEach(Builtin.X, edgesResult)
         for (idx0, idx1), edgeResult in zip(edges, edgesResult):
             ColorEquality(colors[idx0], colors[idx1], edgeResult)
 
@@ -108,29 +108,29 @@ def GroverSearch(f: Callable[[Qubits, Qubit], None],
                  register: Qubits, nIter: int):
     """Grover算法是通用算法, 给出黑盒f和|0❭状态register, 并执行nIter次Grover过程"""
     # 使寄存器处于全部结果的叠加态里
-    ApplyToEach(H, register)
+    ApplyToEach(Builtin.H, register)
     # 使用"相位反冲"技巧翻转目标状态
     with TemporaryQubit(register.system) as target:
-        X(target)
-        H(target)
+        Builtin.X(target)
+        Builtin.H(target)
 
         # 执行Grover过程
         for _ in range(nIter):
             # 把标记状态的相位反转
             f(register, target)
             # 作用Grover扩散算子
-            ApplyToEach(H, register)
-            ApplyToEach(X, register)
-            Controlled(X, register[0:-1], register[-1])
-            ApplyToEach(X, register)
-            ApplyToEach(H, register)
+            ApplyToEach(Builtin.H, register)
+            ApplyToEach(Builtin.X, register)
+            Controlled(Builtin.X, register[0:-1], register[-1])
+            ApplyToEach(Builtin.X, register)
+            ApplyToEach(Builtin.H, register)
             # Grover扩散算子应该在执行完上述步骤后, 把全部状态的相位翻转
             # 但由于全局相位对计算和测量都没有影响, 所以最后一步并不是必须的
             Phase(pi)(register[-1])         # Grover扩散算子最后一步
 
         # 退出前还原临时量子位
-        H(target)
-        X(target)
+        Builtin.H(target)
+        Builtin.X(target)
 
 
 """运行例子
@@ -138,29 +138,31 @@ def GroverSearch(f: Callable[[Qubits, Qubit], None],
 
 
 # 计算迭代Grover过程的数量
-M = 72                              # 正确答案的数量
-N = 2 ** (nColorBits * nVertex)     # 所有答案的数量
-j = round(pi / (4 * arcsin(sqrt(M / N))) - .5)
+m = 72                              # 正确答案的数量
+n = 2 ** (nColorBits * nVertex)     # 所有答案的数量
+j = round(pi / (4 * arcsin(sqrt(m / n))) - .5)
 
 # 初始化量子位系统
 qbsys = QubitsSystem(nColorBits * nVertex)
 register = qbsys.getQubits()
 
 # 这个result是不让编辑器提示result(169)不存在的, 并没有实际用途
-result = MeasureAll(register)
+result = Builtin.MA(register)
 
 # 使用一个额外的量子位判断答案是否正确, 如果不正确则继续运行Grover算法
 with TemporaryQubit(qbsys) as Correctness:
-    while Measure(Correctness) == 0:
+    while Builtin.M(Correctness) == 0:
         # 运行Grover算法
         GroverSearch(ValidVertexColoring, register, j)
 
         # 测量寄存器, 并使量子位全部坍缩到测量结果里
-        result = MeasureAll(register)
+        result = Builtin.MA(register)
         # 判断结果是否正确, 如果正确则把Correctness从|0❭变为|1❭
         ValidVertexColoring(register, Correctness)
         # 无论结果是否正确都需要重置寄存器
-        ResetAll(register)
+        Builtin.RA(register)
+    # 因为while退出时Correctness必定处于|1❭, 则应用X门等于重置Correctness
+    Builtin.X(Correctness)
 
 
 # 使用比较好的方式输出结果
