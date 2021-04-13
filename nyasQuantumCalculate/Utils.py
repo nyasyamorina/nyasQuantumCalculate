@@ -95,7 +95,7 @@ class TimeChunck:
         totaltimer[self.name][1] += time() - self.start
 
 
-def Bools2Int(l: Iterable[Union[Literal[0, 1], bool]]) -> int:
+def Bools2Int(bools: Iterable[Union[Literal[0, 1], bool]]) -> int:
     """把bit列表转为int
 
     Args:
@@ -104,7 +104,7 @@ def Bools2Int(l: Iterable[Union[Literal[0, 1], bool]]) -> int:
     Returns:
         把列表l的第1个元素作为整数的高位, 逐位排列组成的整数"""
     res = 0
-    for ele in l:
+    for ele in bools:
         res <<= 1
         res |= int(ele)
     return res
@@ -134,3 +134,14 @@ def Int2Bools(x: int, n: Optional[int] = None) -> List[bool]:
             res[i] = x & 1 == 1
             x >>= 1
     return res[::-1]
+
+
+def FlipBools(bools: Iterable[Union[Literal[0, 1], bool]]) -> List[bool]:
+    """翻转列表里的所有布尔值
+
+    Args:
+        l: 可迭代对象, 内部元素为bool或0,1
+
+    Returns:
+        翻转布尔值后的数组"""
+    return [not bool(ele) for ele in bools]

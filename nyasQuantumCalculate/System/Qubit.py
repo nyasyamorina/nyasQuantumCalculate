@@ -21,15 +21,15 @@ class Qubit:
         index: 量子位索引
     """
 
-    def __init__(self, sys: QubitsSystem, idx: int) -> None:
+    def __init__(self, qbsys: QubitsSystem, idx: int) -> None:
         """初始化
 
         Args:
             sys: 量子位所处的量子位系统
             idx: 量子位的索引, 应该从0开始到sys.nQubits-1"""
-        if not 0 <= idx < sys.nQubits:
+        if not 0 <= idx < qbsys.nQubits:
             raise ValueError(f"索引为 {idx} 的量子位不存在")
-        self.system = sys
+        self.system = qbsys
         self.index = idx
 
     def __str__(self) -> str:
@@ -68,15 +68,15 @@ class TemporaryQubit:
     >>> del tmpQb           # 释放临时Qubit对象
     """
 
-    def __init__(self, sys: QubitsSystem):
-        self.system = sys
+    def __init__(self, qbsys: QubitsSystem):
+        self.system = qbsys
 
     def __enter__(self) -> Qubit:
-        self.system.addQubit()
+        self.system.addQubits(1)
         return Qubit(self.system, self.system.nQubits - 1)
 
     def __exit__(self, *error: Any) -> None:
-        self.system.popQubit()
+        self.system.popQubits(1)
 
 
 ###############################################################################

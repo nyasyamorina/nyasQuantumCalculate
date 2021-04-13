@@ -18,16 +18,16 @@ __all__ = ["DumpSystemText", "DumpSystemFig", "have_matplotlib"]
 log10_2: float = np.log10(2.)
 
 
-def DumpSystemText(sys: QubitsSystem) -> None:
+def DumpSystemText(qbsys: QubitsSystem) -> None:
     """以字符串形式打印系统所有状态
 
     Args:
         sys: 需要查看的系统"""
-    print(f"# states in {sys.nQubits} qubits system")
-    index_length = 1 + int(sys.nQubits * log10_2)
+    print(f"# states in {qbsys.nQubits} qubits system")
+    index_length = 1 + int(qbsys.nQubits * log10_2)
     format_str = '{' + f":0{index_length}" + '}'
     length = 21 - index_length
-    for index, state in enumerate(sys.states[:, 0]):
+    for index, state in enumerate(qbsys.states[:, 0]):
         prob = np.square(np.abs(state))
         angle = np.angle(state)
         bar_length = int((prob + 1e-8) * length)
@@ -42,7 +42,7 @@ def DumpSystemText(sys: QubitsSystem) -> None:
     print()
 
 
-def DumpSystemFig(sys: QubitsSystem, block: bool = True) -> None:
+def DumpSystemFig(qbsys: QubitsSystem, block: bool = True) -> None:
     """以字符串形式打印系统所有状态
 
     使用前请确保已安装 matplotlib
@@ -51,10 +51,10 @@ def DumpSystemFig(sys: QubitsSystem, block: bool = True) -> None:
         sys: 需要查看的系统"""
     if not have_matplotlib:
         raise ModuleNotFoundError("No module named 'matplotlib'")
-    states = sys.states[:, 0]
+    states = qbsys.states[:, 0]
     prob = np.square(np.abs(states))
     angle = np.angle(states)
-    index_length = 1 + int(sys.nQubits * log10_2)
+    index_length = 1 + int(qbsys.nQubits * log10_2)
     format_str = "∣{" + f":0{index_length}" + "}❭"
     lable_range = range(0, len(states), max(len(states) >> 5, 1))
     lables = [format_str.format(i) for i in lable_range]

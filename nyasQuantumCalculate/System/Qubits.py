@@ -22,10 +22,10 @@ class Qubits:
         indexes: 量子位索引
     """
 
-    def __init__(self, sys: QubitsSystem, *idxs: int) -> None:
-        if not all(0 <= index < sys.nQubits for index in idxs):
+    def __init__(self, qbsys: QubitsSystem, *idxs: int) -> None:
+        if not all(0 <= index < qbsys.nQubits for index in idxs):
             raise ValueError("输入参数内有超出范围的索引")
-        self.system = sys
+        self.system = qbsys
         self.indexes = list(idxs)
         self._ptr = 0
 
@@ -90,17 +90,17 @@ class TemporaryQubits:
     4
     >>> del tmpQbs          # 释放临时Qubits对象
     """
-    def __init__(self, sys: QubitsSystem, nQubits: int):
-        self.system = sys
+    def __init__(self, qbsys: QubitsSystem, nQubits: int):
+        self.system = qbsys
         self.nQubits = nQubits
 
     def __enter__(self) -> Qubits:
-        self.system.addQubit(self.nQubits)
+        self.system.addQubits(self.nQubits)
         return Qubits(self.system, *range(self.system.nQubits - self.nQubits,
                                           self.system.nQubits))
 
     def __exit__(self, *error: Any) -> None:
-        self.system.popQubit(self.nQubits)
+        self.system.popQubits(self.nQubits)
 
 
 ###############################################################################

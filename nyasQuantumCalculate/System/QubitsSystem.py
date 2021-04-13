@@ -62,7 +62,7 @@ class QubitsSystem:
                     self.statesNd.__getitem__((*([0] * self.nQubits),))
                 ) - 1.):
             raise RuntimeError("Before cleaning up qubits system, "
-                               "system should be reset.")
+                               "all qubits in system should be reset.")
 
     @property
     def nQubits(self) -> int: return self.statesNd.ndim
@@ -133,15 +133,13 @@ class QubitsSystem:
         return self._tracker
 
     def restart(self) -> None:
-        self.statesNd = np.zeros([2] * self.nQubits, np.complex128)
+        self.statesNd *= 0.
         self.statesNd.__setitem__((*([0] * self.nQubits),), 1.)
-        self._id = id_manager.getID()
-        self._ctlBits: List[int] = list()
-        self._ctlBitPkgs: List[List[int]] = list()
+        self._ctlBits.clear()
+        self._ctlBitPkgs.clear()
         self._qIndex = list(range(self.nQubits))
         self._qIndexR = list(range(self.nQubits))
-        self._tracker: List[Tuple[Tuple[int, ...],
-                                  Tuple[int, ...], str]] = list()
+        self._tracker.clear()
         self.stopTracking = False
 
     # TODO def isEntangled(self, idx: int) -> bool:
@@ -264,7 +262,7 @@ class QubitsSystem:
         使用_ctlBitPkgs来更新_ctlBits"""
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndex)
-        self._ctlBits = list()
+        self._ctlBits.clear()
         if not self._ctlBitPkgs:
             self.updateQuickIndex()
             return
@@ -276,7 +274,7 @@ class QubitsSystem:
 
     #####################  Related to temporary qubit  ########################
 
-    def addQubit(self, nQubits: int = 1) -> None:
+    def addQubits(self, nQubits: int) -> None:
         """增加量子位*
 
         在系统里增加nQubits个量子位, 并分配在其他量子位末端.
@@ -285,6 +283,8 @@ class QubitsSystem:
 
         Args:
             nQubits: 新增量子位的数量"""
+        if nQubits <= 0:
+            raise ValueError(f"Cannot add {nQubits} qubits.")
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndex)
         new_states = np.zeros([2] * (self.nQubits + nQubits), np.complex128)
@@ -294,7 +294,7 @@ class QubitsSystem:
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndexR)
 
-    def popQubit(self, nQubits: int = 1) -> None:
+    def popQubits(self, nQubits: int) -> None:
         """移除量子位
 
         移除系统末端的nQubits个量子位, 量子位在被移除前需要被重置, 并且确保
@@ -302,6 +302,8 @@ class QubitsSystem:
 
         Args:
             nQubits: 移除量子位的数量"""
+        if nQubits <= 0:
+            raise ValueError(f"Cannot pop {nQubits} qubits.")
         if any(idx >= self.nQubits - nQubits for idx in self._ctlBits):
             raise ValueError("被移除的量子位是控制位")
         if self._ctlBits:

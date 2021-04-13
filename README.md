@@ -88,6 +88,10 @@ print(result)               # 0 or 1
 
 重构了库之间的引用顺序, `Reset`, `Measure`, `ResetAll`, `MeasureAll` 已被 `Builtin.R`, `Builtin.RA`, `Builtin.M`, `Builtin.MA` 替代
 
+新增内部库 `RevCal`, 模拟电子计算机的可逆计算. 大部分方法与量子计算相同, 内置`X`(可逆NOT门), `CNOT`(可逆XOR门), `CCNOT`(可逆AND门). 使用: 输入使用`ApplyFromInt(X, int, Bits)`, 输出使用 `Builtin.MA(Bits)`.
+
+**不要同时引用 `nyasQuantumCalculate` 和 `nyasQuantumCalculate.RevCal`**
+
 ---
 
 ### 联系方式

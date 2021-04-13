@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any
+from typing import Any, Iterable
 
 from .QubitsOperation import *
 from .SingleQubitGate import *
@@ -33,12 +33,39 @@ def Controlled(opr: OperationLike, ctlQbs: Qubits,
     return result
 
 
+def ControlledOnBools(opr: OperationLike, bools: Iterable[bool], ctlQbs: Qubits,
+                    *args: Any, **kwargs: Any) -> Any:
+    """整数控制过程
+
+    类似`Controlled`, 但只有控制位符合bools(而不是全部为1)时, 触发
+    过程opr. 当bools比ctlQbs长时会截断bools, 而bools比ctlQbs短时
+    会使用True填充bools.
+
+    Args:
+        opr: 可控的量子位过程
+        bools: bool列表
+        ctlQbs: 控制位
+        *args, **kwargs: 输入到过程的参数
+
+    Returns:
+        opr返回的值
+    """
+    for bit, qubit in zip(bools, ctlQbs):
+        if not bit:
+            X(qubit)
+    result = Controlled(opr, ctlQbs, *args, **kwargs)
+    for bit, qubit in zip(bools, ctlQbs):
+        if not bit:
+            X(qubit)
+    return result
+
+
 def ControlledOnInt(opr: OperationLike, integer: int, ctlQbs: Qubits,
                     *args: Any, **kwargs: Any) -> Any:
     """整数控制过程
 
     类似`Controlled`, 但只有控制位符合integer(而不是全部为1)时, 触发
-    过程opr. 当integer位数比ctlQbs位数长时会截断高位
+    过程opr. 当integer位数比ctlQbs长时会截断高位
 
     Args:
         opr: 可控的量子位过程
@@ -50,13 +77,7 @@ def ControlledOnInt(opr: OperationLike, integer: int, ctlQbs: Qubits,
         opr返回的值
     """
     bits = Int2Bools(integer, len(ctlQbs))
-    for bit, qubit in zip(bits, ctlQbs):
-        if not bit:
-            X(qubit)
-    result = Controlled(opr, ctlQbs, *args, **kwargs)
-    for bit, qubit in zip(bits, ctlQbs):
-        if not bit:
-            X(qubit)
+    result = ControlledOnBools(opr, bits, ctlQbs, *args, **kwargs)
     return result
 
 
