@@ -66,9 +66,17 @@ print(result)               # 0 or 1
 
 *   内置的方法好少, 使用好困难
 
-    目前这个库还是第一个版本, 仅仅确保了*可运行*, 日后会增加更多功能
+    目前这个库还是测试版本, 仅仅确保了*可运行*, 日后会增加更多功能
 
-*   我可以跟别人分享这个库吗, 有什么限制
+*   为什么与`int`有关的方法感觉有问题
+
+    关于 `ApplyFromInt`, `ControlledOnInt`, 都是以`int`的高位作为多量子位里的第一位. 如果需要以`int`的低位作为第一位, 可以使用 `ApplyFromBool(gate, Int2Bools(int)[::-1], qbs)`, `Int2Bools`在`Utils`里. 但对于`Dump`来说第一个量子位是`int`的低位. 可以通过设置 `Options.reverseBitIndex = False` 来把`Dump`的位翻转.
+
+*   为什么执行`QFT`和`IQFT`的时候使用内存翻了一倍
+
+    使用`numpy`算法的`QFT`底部逻辑是重新构建一个系统状态`statesNd`, 请确保没有在其他地方引用`qbsys.stateNd`. 如果实在需要引用`statesNd`, 可以通过 `Options.QFTwithNumpy = False` 把`QFT`逻辑切换为位门实现, 在很多量子位(如20个以上)速度会受到严重影响.
+
+*   我可以跟别人分享这个库吗, 有什么限制吗
 
     莫得限制, 随便来就好, 最好可以标注一下作者啦
 
@@ -85,6 +93,8 @@ print(result)               # 0 or 1
 减少了部分逻辑, 使某些功能更通用. 例如支持多重控制, 删除临时量子位前必须由用户重置而不是自动重置
 
 增加了内部库 `Builtin`, 内置的位门,测量,重置等操作都以`常量`收录在里面, 而不是直接暴露在表层
+
+增加了 `AQFT` 和 `IAQFT` 在`Builtin`里, See more: `help(Builtin.AQFT)`
 
 重构了库之间的引用顺序, `Reset`, `Measure`, `ResetAll`, `MeasureAll` 已被 `Builtin.R`, `Builtin.RA`, `Builtin.M`, `Builtin.MA` 替代
 

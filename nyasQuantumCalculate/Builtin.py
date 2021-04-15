@@ -7,7 +7,7 @@ __all__ = [
     # Measure
     "M", "MA",
     # QFT
-    "QFT", "IQFT",
+    "QFT", "IQFT", "AQFT", "IAQFT",
     # Reset
     "R", "RA",
     # SingleQubitGate

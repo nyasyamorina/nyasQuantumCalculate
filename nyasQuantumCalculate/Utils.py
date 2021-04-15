@@ -16,8 +16,10 @@ import numpy as np
 
 
 __all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck",
-           "Bools2Int", "Int2Bools"]
+           "Bools2Int", "Int2Bools", "pi"]
 
+
+pi = np.pi
 
 delta = 1e-8
 
@@ -49,7 +51,7 @@ def ColorWheel2RGB(theta: float, get01: bool = False) -> \
 
     Return:
         返回包含RGB颜色的元组"""
-    h_pi_3 = 3. * theta / np.pi
+    h_pi_3 = 3. * theta / pi
     red = colorF(2, h_pi_3)
     green = colorF(0, h_pi_3)
     blue = colorF(4, h_pi_3)

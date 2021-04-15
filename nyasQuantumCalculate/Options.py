@@ -20,6 +20,7 @@ class _options:
         reverseBitIndex: 翻转位索引, True时为从右到左 [default: True]
         QFTwithNumpy: 使用numpy而不是位门实现QFT [default: True]
         checkCleaningSystem: 清除系统时检查系统是否已被重置 [default: True]
+        QFTswap: 默认QFT在末端有SWAP操作, 但有些操作不需要SWAP [default: True]
 
     To use: (reverseBitIndex)
     >>> qbsys = QubitsSystem(2)
@@ -41,6 +42,7 @@ class _options:
         self.reverseBitIndex = True
         self.QFTwithNumpy = True
         self.checkCleaningSystem = True
+        self.QFTswap = True
 
 
 Options = _options()
@@ -96,3 +98,7 @@ class TemporaryOptions:
     @staticmethod
     def checkCleaningSystem(after: bool) -> TempOption:
         return TempOption("checkCleaningSystem", after)
+
+    @staticmethod
+    def QFTswap(after: bool) -> TempOption:
+        return TempOption("QFTswap", after)

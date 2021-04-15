@@ -41,12 +41,11 @@ for yf in range(figSize):
             color = color * alpha + bgc * (1. - alpha)
             color = np.clip(color, 0., 255.)
             fig[yf, xf] = color
-            countRun += 1
-            prop = countRun / totalRun
-            barL = int(50 * prop - 1)
-            print(f"[{100 * prop:.1f}%%] "
-                f"[{'=' * max(barL, 0)}>{' ' * max(50 - barL, 0)}]", end='\r')
-            # `for` is so f**king slow in python!!!
+        countRun += 1
+        prop = countRun / totalRun
+        barL = int(50 * prop - 1)
+        print(f"[{100 * prop:.1f}%%] "
+            f"[{'=' * max(barL, 0)}>{' ' * max(49 - barL, 0)}]", end='\r')
 print()
 
 ###############################################################################
