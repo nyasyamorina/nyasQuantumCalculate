@@ -90,7 +90,7 @@ def ValidVertexColoring(register: Qubits, target: Qubit):
             ColorEquality(colors[idx0], colors[idx1], edgeResult)
 
 
-"""Grover算法是一个渐进算法, 也就是需要不断迭代Grover过程才可以得到需要的答案,
+"""Grover算法需要不断迭代Grover过程才可以得到需要的答案,
 
 Grover过程包含以下两步:
     1) 把标记状态的相位反转
@@ -121,7 +121,7 @@ def GroverSearch(f: Callable[[Qubits, Qubit], None],
             # 作用Grover扩散算子
             ApplyToEach(Builtin.H, register)
             ApplyToEach(Builtin.X, register)
-            Controlled(Builtin.X, register[0:-1], register[-1])
+            Controlled(Builtin.Z, register[0:-1], register[-1])
             ApplyToEach(Builtin.X, register)
             ApplyToEach(Builtin.H, register)
             # Grover扩散算子应该在执行完上述步骤后, 把全部状态的相位翻转
