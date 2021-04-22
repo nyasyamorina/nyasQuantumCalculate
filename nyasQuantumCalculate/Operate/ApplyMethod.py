@@ -35,7 +35,6 @@ def ApplyFromInt(gate: SingleQubitGate, integer: int, qbs: Qubits) -> None:
     """使用int控制单量子位门
 
     如同`ApplyFromBools`差不多, 但bool列表从integer里推导.
-    默认在qbs第1个量子位对应integer高位, 最后1个量子位对应低位.
 
     Args:
         gate: 需要作用的单量子位门

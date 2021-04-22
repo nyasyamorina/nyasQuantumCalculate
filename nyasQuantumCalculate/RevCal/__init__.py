@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from .HighLevel import *
 from .Operate import *
 from .System import *
 from . import Builtin
@@ -8,7 +9,7 @@ from . import Builtin
 __all__ = ["BitsSystem", "Bit", "Bits", "TemporaryBit", "TemporaryBits",
            "BitsOperation", "Controlled", "ControlledOnBools", "ControlledOnInt",
            "ApplyToEach", "ApplyFromBools", "ApplyFromInt", "Toffoli",
-           "Builtin"]
+           "Builtin", "Adder"]
 
 
 """

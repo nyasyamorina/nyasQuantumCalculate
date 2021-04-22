@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, Type, TypeVar
+from typing import Any, Callable, Type, TypeVar
 
 from nyasQuantumCalculate.System import *
 
@@ -9,7 +9,9 @@ __all__ = ["QubitsOperation", "OperationLike"]
 
 
 OperationLike = TypeVar("OperationLike",
-                        "QubitsOperation", Type["QubitsOperation"])
+                        "QubitsOperation",
+                        Type["QubitsOperation"],
+                        Callable[..., Any])
 
 
 class QubitsOperation:
@@ -39,10 +41,17 @@ class QubitsOperation:
                 ...
 
             def __call__(self, qbs: Qubits, qb: Qubit) -> None:
-                # 这个方法用于控制过程的跟踪和系统判断等
-                if qbs.system.id != qb.system.id:
-                    # 判断输入量子位是否在同一个系统内
-                    raise ValueError(...)
+                # 这个方法用于控制过程的跟踪和判断错误等
+                if Options.inputCheck:
+                    if not inSameSystem(qbs, qb):
+                        # 判断输入量子位是否在同一个系统内
+                        raise ValueError(...)
+                    if any(isControllingQubits(qbs, qb)):
+                        # 判断输入量子位是否存在控制位
+                        raise ValueError(...)
+                    if haveSameQubit(qbs, qb):
+                        # 判断是否有重复的量子位
+                        raise ValueError(...)
                 qbsys = qbs.system      # 从输入参数里获得量子位系统
                 sysStopTrack = qbsys.stopTracking   # 用于在退出方法时还原
                 if qbsys.canTrack() and self.trackable:
@@ -62,7 +71,7 @@ class QubitsOperation:
         self.trackable = trackable
 
     @staticmethod
-    def getOperation(opr: OperationLike) -> "QubitsOperation":
+    def getOperation(opr: OperationLike) -> Callable[[Any], Any]:
         return opr() if isinstance(opr, type) else opr
 
     #def call(self, ...) -> ...: ...

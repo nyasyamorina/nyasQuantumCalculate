@@ -13,25 +13,43 @@ from nyasQuantumCalculate.System import *
 __all__ = ["QFT", "IQFT", "AQFT", "IAQFT"]
 
 
-def R(n: int) -> SingleQubitGate:
-    """QFT里的相位门"""
-    gate = R1(np.pi / (1 << (n - 1)))
-    gate.name = f"R_{n}"
-    return gate
-
-
 def QFT_gate(qbs: Qubits) -> None:
-    Rs = [R(n) for n in range(2, len(qbs) + 1)]
+    n = len(qbs)
+    if n == 0:
+        return
+    if n == 1:
+        H(qbs[0])
+        return
+    RotationGates.updateRs(n)
     for idx0, qb in enumerate(qbs):
         H(qb)
         for idx1, ctlQb in enumerate(qbs[idx0 + 1:]):
-            Controlled(Rs[idx1], ctlQb.asQubits(), qb)
+            Controlled(RotationGates.Rs[idx1 + 1], ctlQb.asQubits(), qb)
     if Options.QFTswap:
-        for idx in range(len(qbs) // 2):
+        for idx in range(n // 2):
             SWAP(qbs[idx], qbs[-(idx + 1)])
 
 
+def iQFT_gate(qbs: Qubits) -> None:
+    n = len(qbs)
+    if n == 0:
+        return
+    if n == 1:
+        H(qbs[0])
+        return
+    RotationGates.updateiRs(n)
+    if Options.QFTswap:
+        for idx in range(n // 2):
+            SWAP(qbs[idx], qbs[-(idx + 1)])
+    for idx0, qb in enumerate(qbs[::-1]):
+        for idx1, ctlQb in enumerate(qbs[n - idx0:]):
+            Controlled(RotationGates.iRs[idx1 + 1], ctlQb.asQubits(), qb)
+        H(qb)
+
+
 def QFT_numpy(qbs: Qubits) -> None:
+    if len(qbs) == 0:
+        return
     qbsys = qbs.system
     qbs_indexes = [qbsys.statesNdIndex(index) for index in qbs.indexes]
     indexesR = qbs_indexes + [index for index in range(qbsys.nQubits)
@@ -39,36 +57,23 @@ def QFT_numpy(qbs: Qubits) -> None:
     indexes = list(range(qbsys.nQubits))
     for index0, index1 in enumerate(indexesR):
         indexes[index1] = index0
+    controlling = (..., *([1] * qbsys.nControllingQubits))
     states = qbsys.statesNd. \
         transpose(indexesR). \
-        reshape([-1] + [2] * (qbsys.nQubits - len(qbs)))
-    states: np.ndarray = 2 ** (len(qbs) / 2) * \
-        np.fft.ifft(states, axis=0)
-    qbsys.statesNd = states.reshape([2] * qbsys.nQubits).transpose(indexes)
+        reshape([-1] + [2] * (qbsys.nQubits - len(qbs))).copy()
+    after: np.ndarray = 2 ** (len(qbs) / 2) * \
+        np.fft.ifft(states.__getitem__(controlling), axis=0)
+    states.__setitem__(controlling, after)
+    qbsys.statesNd *= 0.
+    qbsys.statesNd += states.reshape([2] * qbsys.nQubits).transpose(indexes)
     if not Options.QFTswap:
-        for idx in range(len(qbs) // 2):
-            SWAP(qbs[idx], qbs[-(idx + 1)])
-
-
-def iR(n: int) -> SingleQubitGate:
-    """iQFT里的相位门"""
-    gate = R1(-np.pi / (1 << (n - 1)))
-    gate.name = f"iR_{n}"
-    return gate
-
-
-def iQFT_gate(qbs: Qubits) -> None:
-    iRs = [iR(n) for n in range(2, len(qbs) + 1)]
-    for idx0, qb in enumerate(qbs):
-        H(qb)
-        for idx1, ctlQb in enumerate(qbs[idx0 + 1:]):
-            Controlled(iRs[idx1], ctlQb.asQubits(), qb)
-    if Options.QFTswap:
         for idx in range(len(qbs) // 2):
             SWAP(qbs[idx], qbs[-(idx + 1)])
 
 
 def iQFT_numpy(qbs: Qubits) -> None:
+    if len(qbs) == 0:
+        return
     if not Options.QFTswap:
         for idx in range(len(qbs) // 2):
             SWAP(qbs[idx], qbs[-(idx + 1)])
@@ -79,12 +84,15 @@ def iQFT_numpy(qbs: Qubits) -> None:
     indexes = list(range(qbsys.nQubits))
     for index0, index1 in enumerate(indexesR):
         indexes[index1] = index0
+    controlling = (..., *([1] * qbsys.nControllingQubits))
     states = qbsys.statesNd. \
         transpose(indexesR). \
-        reshape([-1] + [2] * (qbsys.nQubits - len(qbs)))
-    states: np.ndarray = 2 ** (-len(qbs) / 2) * \
-        np.fft.fft(states, axis=0)
-    qbsys.statesNd = states.reshape([2] * qbsys.nQubits).transpose(indexes)
+        reshape([-1] + [2] * (qbsys.nQubits - len(qbs))).copy()
+    after: np.ndarray = 2 ** (-len(qbs) / 2) * \
+        np.fft.fft(states.__getitem__(controlling), axis=0)
+    states.__setitem__(controlling, after)
+    qbsys.statesNd *= 0.
+    qbsys.statesNd += states.reshape([2] * qbsys.nQubits).transpose(indexes)
 
 
 class _QFT(QubitsOperation):
@@ -111,6 +119,7 @@ class _QFT(QubitsOperation):
         super().__init__()
         self.name = "QFT"
         self.trackable = True
+        self.controllable = True
 
     def call(self, qbs: Qubits) -> None:
         if Options.QFTwithNumpy:
@@ -119,6 +128,11 @@ class _QFT(QubitsOperation):
             QFT_gate(qbs)
 
     def __call__(self, qbs: Qubits) -> None:
+        if Options.inputCheck:
+            if any(isControllingQubits(qbs)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if qbs.haveSameQubit():
+                raise ValueError("QFT cannot operate multiple same qubits.")
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
             qbs.system.addTrack(self.name, *qbs.indexes)
@@ -133,6 +147,7 @@ class _iQFT(QubitsOperation):
         super().__init__()
         self.name = "iQFT"
         self.trackable = True
+        self.controllable = True
 
     def call(self, qbs: Qubits) -> None:
         if Options.QFTwithNumpy:
@@ -141,6 +156,11 @@ class _iQFT(QubitsOperation):
             iQFT_gate(qbs)
 
     def __call__(self, qbs: Qubits) -> None:
+        if Options.inputCheck:
+            if any(isControllingQubits(qbs)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if qbs.haveSameQubit():
+                raise ValueError("QFT cannot operate multiple same qubits.")
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
             qbs.system.addTrack(self.name, *qbs.indexes)
@@ -165,21 +185,33 @@ class _AQFT(QubitsOperation):
         super().__init__()
         self.name = "AQFT"
         self.trackable = True
+        self.controllable = True
 
     def call(self, qbs: Qubits, m: int) -> None:
-        Rs = [R(i) for i in range(2, m + 1)]
+        n = len(qbs)
+        if n == 0:
+            return
+        if n == 1:
+            H(qbs[0])
+            return
+        RotationGates.updateRs(n)
         for idx0, qb in enumerate(qbs):
             H(qb)
             for idx1, ctl in enumerate(qbs[idx0 + 1: min(idx0 + m, len(qbs))]):
-                Controlled(Rs[idx1], ctl.asQubits(), qb)
+                Controlled(RotationGates.Rs[idx1 + 1], ctl.asQubits(), qb)
         if Options.QFTswap:
             for idx in range(len(qbs) // 2):
                 SWAP(qbs[idx], qbs[-(idx + 1)])
 
     def __call__(self, qbs: Qubits, m: int) -> None:
-        if m <= 0 or m > len(qbs):
-            raise ValueError("'m' should be greater than 0 and "
-                             "lower or equal to len(qbs)")
+        if Options.inputCheck:
+            if m <= 0 or m > len(qbs):
+                raise ValueError("'m' should be greater than 0 and "
+                                "lower or equal to len(qbs)")
+            if any(isControllingQubits(qbs)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if qbs.haveSameQubit():
+                raise ValueError("QFT cannot operate multiple same qubits.")
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
             qbs.system.addTrack(self.name + f"_{m}", *qbs.indexes)
@@ -194,21 +226,33 @@ class _iAQFT(QubitsOperation):
         super().__init__()
         self.name = "iAQFT"
         self.trackable = True
+        self.controllable = True
 
     def call(self, qbs: Qubits, m: int) -> None:
-        iRs = [iR(i) for i in range(2, m + 1)]
+        n = len(qbs)
+        if n == 0:
+            return
+        if n == 1:
+            H(qbs[0])
+            return
+        RotationGates.updateiRs(n)
         for idx0, qb in enumerate(qbs):
             H(qb)
             for idx1, ctl in enumerate(qbs[idx0 + 1: min(idx0 + m, len(qbs))]):
-                Controlled(iRs[idx1], ctl.asQubits(), qb)
+                Controlled(RotationGates.iRs[idx1 + 1], ctl.asQubits(), qb)
         if Options.QFTswap:
             for idx in range(len(qbs) // 2):
                 SWAP(qbs[idx], qbs[-(idx + 1)])
 
     def __call__(self, qbs: Qubits, m: int) -> None:
-        if m <= 0 or m > len(qbs):
-            raise ValueError("'m' should be greater than 0 and "
-                             "lower or equal to len(qbs)")
+        if Options.inputCheck:
+            if m <= 0 or m > len(qbs):
+                raise ValueError("'m' should be greater than 0 and "
+                                "lower or equal to len(qbs)")
+            if any(isControllingQubits(qbs)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if qbs.haveSameQubit():
+                raise ValueError("QFT cannot operate multiple same qubits.")
         sysStopTrack = qbs.system.stopTracking
         if qbs.system.canTrack() and self.trackable:
             qbs.system.addTrack(self.name + f"_{m}", *qbs.indexes)

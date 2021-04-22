@@ -84,7 +84,7 @@ SingleBitGate = TypeVar("SingleBitGate", _I, _X)
 def Controlled(opr: BitsOperation, ctlBs: Bits,
                *args: Any, **kwargs: Any) -> Any:
     if not opr.controllable:
-        raise ValueError("目标过程不是可控的")
+        raise ValueError("Target process is uncontrollable.")
     bsys = ctlBs.system
     bsys.addControllingBits(*ctlBs.indexes)
     if all(bsys.states[idx] for idx in bsys.ctlBits):
@@ -122,7 +122,7 @@ class _CNOT(BitsOperation):
 
     def __call__(self, b0: Bit, b1: Bit) -> None:
         if b0.system.id != b1.system.id:
-            raise ValueError("两个位处于不同的量子位系统")
+            raise ValueError("Two bits are in different bit system.")
         bsys = b0.system
         sysStopTrack = bsys.stopTracking
         if bsys.canTrack() and self.trackable:
@@ -145,7 +145,7 @@ class _CCNOT(BitsOperation):
     def __call__(self, b0: Bit, b1: Bit, b2: Bit) -> None:
         if b0.system.id != b1.system.id or \
                 b0.system.id != b2.system.id:
-            raise ValueError("三个位处于不同的量子位系统")
+            raise ValueError("Three bits are in different bit system.")
         bsys = b0.system
         sysStopTrack = bsys.stopTracking
         if bsys.canTrack() and self.trackable:
@@ -195,7 +195,7 @@ class _SWAP(BitsOperation):
 
     def __call__(self, b0: Bit, b1: Bit) -> None:
         if b0.system.id != b1.system.id:
-            raise ValueError("两个位处于不同的量子位系统")
+            raise ValueError("Two bits are in different bit system.")
         bsys = b0.system
         sysStopTrack = bsys.stopTracking
         if bsys.canTrack() and self.trackable:

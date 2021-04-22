@@ -2,8 +2,6 @@
 
 """一些库内大量使用的方法和小工具
 
-这个包不会被显式引用
-
 delta: 控制浮点数比较精度 [default: 1e-8]
 ColorWeel2RGB()
 TimeChunck
@@ -14,9 +12,11 @@ from time import time
 
 import numpy as np
 
+from .Options import *
+
 
 __all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck",
-           "Bools2Int", "Int2Bools", "pi"]
+           "Bools2Int", "Int2Bools", "pi", "nBits"]
 
 
 pi = np.pi
@@ -104,9 +104,9 @@ def Bools2Int(bools: Iterable[Union[Literal[0, 1], bool]]) -> int:
         l: 可迭代的对象, 内部元素为bool或0,1
 
     Returns:
-        把列表l的第1个元素作为整数的高位, 逐位排列组成的整数"""
+        逐位排列组成的整数"""
     res = 0
-    for ele in bools:
+    for ele in (list(bools)[::-1] if Options.littleEndian else bools):
         res <<= 1
         res |= int(ele)
     return res
@@ -122,7 +122,7 @@ def Int2Bools(x: int, n: Optional[int] = None) -> List[bool]:
     Returns:
         bool列表, 第1个为x的高位"""
     if x < 0:
-        raise ValueError("负数不能转化为bools")
+        raise ValueError("Negative numbers cannot be converted to 'bools'")
     if n is None:
         res: List[bool] = list()
         while x > 0:
@@ -135,7 +135,7 @@ def Int2Bools(x: int, n: Optional[int] = None) -> List[bool]:
                 break
             res[i] = x & 1 == 1
             x >>= 1
-    return res[::-1]
+    return res if Options.littleEndian else res[::-1]
 
 
 def FlipBools(bools: Iterable[Union[Literal[0, 1], bool]]) -> List[bool]:
@@ -147,3 +147,20 @@ def FlipBools(bools: Iterable[Union[Literal[0, 1], bool]]) -> List[bool]:
     Returns:
         翻转布尔值后的数组"""
     return [not bool(ele) for ele in bools]
+
+
+def nBits(x: int) -> int:
+    """检查x至少需要多少bits表示
+
+    Args:
+        x: 需要检查的数字, 应该大于等于0
+
+    Returns:
+        至少可以表示x的bit长度"""
+    if x < 0:
+        raise ValueError("x should be greater than 0")
+    n = 0
+    while x > 0:
+        x >>= 1
+        n += 1
+    return max(n, 1)

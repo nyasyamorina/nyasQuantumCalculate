@@ -24,10 +24,13 @@ class Qubits:
 
     def __init__(self, qbsys: QubitsSystem, *idxs: int) -> None:
         if not all(0 <= index < qbsys.nQubits for index in idxs):
-            raise ValueError("输入参数内有超出范围的索引")
+            raise ValueError("Out of range index(es) in input parameters.")
         self.system = qbsys
         self.indexes = list(idxs)
         self._ptr = 0
+
+    def haveSameQubit(self) -> bool:
+        return len(self.indexes) != len(set(self.indexes))
 
     def __str__(self) -> str:
         return f"Qubits({len(self)} qubits)"
@@ -110,7 +113,7 @@ class TemporaryQubits:
 
 def Qubit___add__(self: Qubit, other: Union[Qubit, Qubits]) -> Qubits:
     if isinstance(other, Qubits):
-        return other + self
+        return Qubits(self.system, self.index, *other.indexes)
     return Qubits(self.system, self.index, other.index)
 
 

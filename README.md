@@ -66,11 +66,7 @@ print(result)               # 0 or 1
 
 *   内置的方法好少, 使用好困难
 
-    目前这个库还是测试版本, 仅仅确保了*可运行*, 日后会增加更多功能
-
-*   为什么与`int`有关的方法感觉有问题
-
-    关于 `ApplyFromInt`, `ControlledOnInt`, 都是以`int`的高位作为多量子位里的第一位. 如果需要以`int`的低位作为第一位, 可以使用 `ApplyFromBool(gate, Int2Bools(int)[::-1], qbs)`, `Int2Bools`在`Utils`里. 但对于`Dump`来说第一个量子位是`int`的低位. 可以通过设置 `Options.reverseBitIndex = False` 来把`Dump`的位翻转.
+    目前这个库还是测试版本, 日后会增加更多功能
 
 *   为什么执行`QFT`和`IQFT`的时候使用内存翻了一倍
 
@@ -82,25 +78,33 @@ print(result)               # 0 or 1
 
 ---
 
-### 0.1.0
-
-完全从`Cython`迁移到 `prue Python`+`numpy`, 使得代码结构具有层次, 容易修改和添加. 但这无疑牺牲了运行速度.
-
-增加了 `QFT` 和 `IQFT`. 并更新了系统跟踪, 现在可以支持跟踪高级复杂操作的而不跟踪底层操作, 更多: `help(QubitsOperation)`
-
 ### 0.1.1
 
 减少了部分逻辑, 使某些功能更通用. 例如支持多重控制, 删除临时量子位前必须由用户重置而不是自动重置
 
 增加了内部库 `Builtin`, 内置的位门,测量,重置等操作都以`常量`收录在里面, 而不是直接暴露在表层
 
-增加了 `AQFT` 和 `IAQFT` 在`Builtin`里, See more: `help(Builtin.AQFT)`
+增加了 `AQFT` 和 `IAQFT` 在`Builtin`里. See more: `help(Builtin.AQFT)`
 
 重构了库之间的引用顺序, `Reset`, `Measure`, `ResetAll`, `MeasureAll` 已被 `Builtin.R`, `Builtin.RA`, `Builtin.M`, `Builtin.MA` 替代
 
 新增内部库 `RevCal`, 模拟电子计算机的可逆计算. 大部分方法与量子计算相同, 内置`X`(可逆NOT门), `CNOT`(可逆XOR门), `CCNOT`(可逆AND门). 使用: 输入使用`ApplyFromInt(X, int, Bits)`, 输出使用 `Builtin.MA(Bits)`.
 
 **不要同时引用 `nyasQuantumCalculate` 和 `nyasQuantumCalculate.RevCal`**
+
+### 0.1.2
+
+取消 **选项**`reverseBitIndex`, 增加 **选项**`littleEndian`. 现在 `ApplyFromInt`, `ControlledOnOnt`, `Bools2Int`, `Int2Bools` 和 `Dump` 方法都受 `littleEndian` 影响.
+
+修复 `Qubit + Qubits` 的顺序错误
+
+现在 `SWAP` 和 `~QFT` 方法是受控过程, 并修复`Options.QFTwithNumpy`为`False`时`IQFT`的逻辑错误
+
+增加 **选项**`inputCheck`, 用于检查输入过程参数的正确性, 比如多个量子位应该在同一个系统内, 过程作用的量子位不应该为控制位, 不应该重复输入相同的量子位, 等.
+
+增加`|1❭`相位旋转门的管理器 `RotationGates`. See more: `help(RotationGates)`
+
+增加高级操作 `加法`: `Add`, `AddInt`, 以及他们的逆操作`I~`, 相位版本`Phase~`和逆相位版本`IPhase~`. 增加n-bit加法电路 `Adder`.
 
 ---
 
@@ -111,6 +115,6 @@ qq群 ~~瑟图群~~ : 274767696
 作者: **nyasyamorina** *[qq: 1275935966]* (加好友时请备注来意, 免得当作机器人了)
 
 
-特别感谢 **_hyl** 提供 `pyi` 文件的翻译, _hyl: `"如果发现翻译有错的话, 可以去找我商讨"` *[qq: 2738846947]*  ~~[至版本0.0.1]~~
+特别感谢 **_hyl** 提供 `pyi` 文件的翻译, _hyl: `"如果发现翻译有错的话, 可以去找我商讨"` *[qq: 2738846947]*
 
 还有非常感激广大群友提供技术支持

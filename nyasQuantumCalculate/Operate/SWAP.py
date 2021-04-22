@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from .ControlMethod import *
+from .SingleQubitGate import *
 from .QubitsOperation import *
+from nyasQuantumCalculate.Options import *
 from nyasQuantumCalculate.System import *
 
 
@@ -32,17 +35,35 @@ class _SWAP(QubitsOperation):
         super().__init__()
         self.name = "SWAP"
         self.trackable = True
+        self.controllable = True
 
     def call(self, q0: Qubit, q1: Qubit) -> None:
         qbsys = q0.system
-        qbsys.statesNd = qbsys.statesNd.swapaxes(
-            qbsys.statesNdIndex(q0.index),
-            qbsys.statesNdIndex(q1.index)
-        )
+        if qbsys.nControllingQubits == 0:
+            qbsys.statesNd = qbsys.statesNd.swapaxes(
+                qbsys.statesNdIndex(q0.index),
+                qbsys.statesNdIndex(q1.index)
+            )
+        else:
+            # 事实上, 受控SWAP应该为
+            # CNOT(q1, q0); Controlled(CNOT, ctlQbs, q0, q1); CNOT(q1, q0)
+            # 而这里是
+            # Controlled(CNOT, ctlQbs, q1, q0)
+            # Controlled(CNOT, ctlQbs, q0, q1)
+            # Controlled(CNOT, ctlQbs, q1, q0)
+            # 结果上相同就好
+            CNOT(q1, q0)
+            CNOT(q0, q1)
+            CNOT(q1, q0)
 
     def __call__(self, q0: Qubit, q1: Qubit) -> None:
-        if q0.system.id != q1.system.id:
-            raise ValueError("两个量子位处于不同的量子位系统")
+        if Options.inputCheck:
+            if not inSameSystem(q0, q1):
+                raise ValueError("Two qubits are in different qubit system.")
+            if any(isControllingQubits(q0, q1)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if haveSameQubit(q0, q1):
+                raise ValueError("Cannot swap the same qubit.")
         qbsys = q0.system
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:

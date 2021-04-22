@@ -5,7 +5,8 @@ from typing import Any, List, Tuple, Union
 from nyasQuantumCalculate.Options import *
 
 
-__all__ = ["BitsSystem", "Bit", "Bits", "TemporaryBit", "TemporaryBits"]
+__all__ = ["BitsSystem", "Bit", "Bits", "TemporaryBit", "TemporaryBits",
+           "inSameSystem"]
 
 
 class id_manager:
@@ -65,7 +66,7 @@ class BitsSystem:
         if not idxs:
             return
         if any(idx in self.ctlBits for idx in idxs):
-            raise ValueError("控制位被重复添加")
+            raise ValueError("Controlling bit are added repeatedly.")
         self._ctlBitPkgs.append(list(idxs))
         self.updateControllingBits()
 
@@ -93,7 +94,7 @@ class BitsSystem:
         if nBits <= 0:
             raise ValueError(f"Cannot add {nBits} bits.")
         if any(idx >= self.nBits - nBits for idx in self.ctlBits):
-            raise ValueError("被移除的位是控制位")
+            raise ValueError("The qubit removed is controlling bit.")
         self.states = self.states[:-nBits]
 
 
@@ -104,11 +105,11 @@ class BitsSystem:
 class Bit:
     def __init__(self, bsys: BitsSystem, idx: int) -> None:
         if not 0 <= idx < bsys.nBits:
-            raise ValueError(f"索引为 {idx} 的位不存在")
+            raise ValueError(f"The qubit indexed {idx} does not exist.")
         self.system = bsys
         self.index = idx
 
-    def __add__(self, other: "Bit") -> Any:
+    def __add__(self, other: Union["Bit", "Bits"]) -> Any:
         raise NotImplementedError
 
     def asBits(self) -> Any:
@@ -134,7 +135,7 @@ class TemporaryBit:
 class Bits:
     def __init__(self, bsys: BitsSystem, *idxs: int) -> None:
         if not all(0 <= index < bsys.nBits for index in idxs):
-            raise ValueError("输入参数内有超出范围的索引")
+            raise ValueError("Input parameters are out of range.")
         self.system = bsys
         self.indexes = list(idxs)
         self._ptr = 0
@@ -195,7 +196,7 @@ def BitsSystem_getBit(self: BitsSystem, idx: int) -> Bit:
 
 def Bit___add__(self: Bit, other: Union[Bit, Bits]) -> Bits:
     if isinstance(other, Bits):
-        return other + self
+        return Bits(self.system, self.index, *other.indexes)
     return Bits(self.system, self.index, other.index)
 
 
@@ -236,3 +237,16 @@ Bit.asBits = Bit_asBits
 BitsSystem.getBit = BitsSystem_getBit
 BitsSystem.getBits = BitsSystem_getBits
 BitsSystem.__getitem__ = BitsSystem___getitem__
+
+###############################################################################
+###############################################################################
+
+
+def inSameSystem(*args: Union[Bit, Bits, BitsSystem]) -> bool:
+    """检查输入是否处于同一个量子位系统内"""
+    ele0 = args[0]
+    id = (ele0 if isinstance(ele0, BitsSystem) else ele0.system).id
+    for ele in args[1:]:
+        if (ele if isinstance(ele, BitsSystem) else ele.system).id != id:
+            return False
+    return True

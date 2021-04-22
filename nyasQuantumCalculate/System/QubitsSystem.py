@@ -77,7 +77,7 @@ class QubitsSystem:
     def states(self) -> np.ndarray:
         # shape of states should be (2^n, 1) (column vector)
         indexes = self._qIndex[::-1] \
-            if Options.reverseBitIndex else self._qIndex
+            if Options.littleEndian else self._qIndex
         return self.statesNd. \
             transpose(indexes). \
             reshape([-1, 1])
@@ -194,6 +194,9 @@ class QubitsSystem:
                 return False
         return True
 
+    def isControlling(self, idx: int) -> bool:
+        return idx in self._ctlBits
+
     def statesNdIndex(self, idx: int, reverse: bool = False) -> int:
         """内部数组的索引
 
@@ -207,7 +210,7 @@ class QubitsSystem:
         Returns:
             索引"""
         if not 0 <= idx < self.nQubits:
-            raise ValueError(f"索引为 {idx} 的量子位不存在")
+            raise ValueError(f"The qubit indexed {idx} does not exist.")
         if not self._ctlBits:
             return idx
         if reverse:
@@ -227,7 +230,7 @@ class QubitsSystem:
         if not idxs:
             return
         if any(idx in self._ctlBits for idx in idxs):
-            raise ValueError("控制位被重复添加")
+            raise ValueError("Controlling bit is added repeatedly.")
         self._ctlBitPkgs.append(list(idxs))
         self.updateControllingQubits()
 
@@ -283,8 +286,10 @@ class QubitsSystem:
 
         Args:
             nQubits: 新增量子位的数量"""
-        if nQubits <= 0:
+        if nQubits < 0:
             raise ValueError(f"Cannot add {nQubits} qubits.")
+        if nQubits == 0:
+            return
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndex)
         new_states = np.zeros([2] * (self.nQubits + nQubits), np.complex128)
@@ -302,17 +307,19 @@ class QubitsSystem:
 
         Args:
             nQubits: 移除量子位的数量"""
-        if nQubits <= 0:
+        if nQubits < 0:
             raise ValueError(f"Cannot pop {nQubits} qubits.")
+        if nQubits == 0:
+            return
         if any(idx >= self.nQubits - nQubits for idx in self._ctlBits):
-            raise ValueError("被移除的量子位是控制位")
+            raise ValueError("The qubit removed is controlling qubit.")
         if self._ctlBits:
             self.statesNd = self.statesNd.transpose(self._qIndex)
         states = self.statesNd.__getitem__((..., *([0] * nQubits)))
         if not equal0(sss(states) - 1.):
             if self._ctlBits:
                 self.statesNd = self.statesNd.transpose(self._qIndexR)
-            raise RuntimeError("被移除的量子位未重置")
+            raise RuntimeError("The qubit removed is not reset.")
         self.statesNd = states.copy()
         self.updateQuickIndex()
         if self._ctlBits:

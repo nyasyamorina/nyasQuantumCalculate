@@ -17,32 +17,34 @@ class _options:
     Attributes:
         autoNormalize: 自动在作用位门后归一化系统 [default: True]
         allowTracking: 跟踪量子位系统的每一个操作 [default: False]
-        reverseBitIndex: 翻转位索引, True时为从右到左 [default: True]
+        littleEndian: 小端模式 [default: False]
         QFTwithNumpy: 使用numpy而不是位门实现QFT [default: True]
         checkCleaningSystem: 清除系统时检查系统是否已被重置 [default: True]
         QFTswap: 默认QFT在末端有SWAP操作, 但有些操作不需要SWAP [default: True]
+        inputCheck: 对位门输入进行检查, 避免造成错误的逻辑结果 [default: True]
 
-    To use: (reverseBitIndex)
+    To use: (littleEndian)
     >>> qbsys = QubitsSystem(2)
     >>> H(qbsys[0])
     >>> qbsys.states
     array([[0.70710678+0.j],
-       [0.70710678+0.j],
        [0.        +0.j],
+       [0.70710678+0.j],
        [0.        +0.j]])
-    >>> Options.reverseBitIndex = False
+    >>> Options.reverseBitIndex = True
     array([[0.70710678+0.j],
-       [0.        +0.j],
        [0.70710678+0.j],
+       [0.        +0.j],
        [0.        +0.j]])
     """
     def __init__(self) -> None:
         self.autoNormalize = True
         self.allowTracking = False
-        self.reverseBitIndex = True
+        self.littleEndian = False
         self.QFTwithNumpy = True
         self.checkCleaningSystem = True
         self.QFTswap = True
+        self.inputCheck = True
 
 
 Options = _options()
@@ -88,8 +90,8 @@ class TemporaryOptions:
         return TempOption("allowTracking", after)
 
     @staticmethod
-    def reverseBitIndex(after: bool) -> TempOption:
-        return TempOption("reverseBitIndex", after)
+    def littleEndian(after: bool) -> TempOption:
+        return TempOption("littleEndian", after)
 
     @staticmethod
     def QFTwithNumpy(after: bool) -> TempOption:
@@ -102,3 +104,7 @@ class TemporaryOptions:
     @staticmethod
     def QFTswap(after: bool) -> TempOption:
         return TempOption("QFTswap", after)
+
+    @staticmethod
+    def inputCheck(after: bool) -> TempOption:
+        return TempOption("inputCheck", after)

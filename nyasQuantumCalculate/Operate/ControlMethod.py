@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, Iterable
+from nyasQuantumCalculate.Options import Options
+from typing import Any, Callable, Iterable, Union
 
 from .QubitsOperation import *
 from .SingleQubitGate import *
@@ -11,7 +12,7 @@ from nyasQuantumCalculate.System import *
 __all__ = ["Controlled", "ControlledOnInt", "Toffoli", "CNOT", "CCNOT"]
 
 
-def Controlled(opr: OperationLike, ctlQbs: Qubits,
+def Controlled(opr: Union[OperationLike, Callable[[Any], Any]], ctlQbs: Qubits,
                *args: Any, **kwargs: Any) -> Any:
     """控制过程
 
@@ -25,8 +26,8 @@ def Controlled(opr: OperationLike, ctlQbs: Qubits,
     Returns:
         opr返回的值"""
     operation = QubitsOperation.getOperation(opr)
-    if not operation.controllable:
-        raise ValueError("目标过程不是可控的")
+    if isinstance(operation, QubitsOperation) and not operation.controllable:
+        raise ValueError("Target process is uncontrollable.")
     ctlQbs.system.addControllingQubits(*ctlQbs.indexes)
     result = operation(*args, **kwargs)
     ctlQbs.system.popControllingQubits()
@@ -99,8 +100,14 @@ class _CNOT(QubitsOperation):
         Controlled(X, q0.asQubits(), q1)
 
     def __call__(self, q0: Qubit, q1: Qubit) -> None:
-        if q0.system.id != q1.system.id:
-            raise ValueError("两个量子位处于不同的量子位系统")
+        if Options.inputCheck:
+            if not inSameSystem(q0, q1):
+                raise ValueError("Two qubits are in different qubit system.")
+            if any(isControllingQubits(q0, q1)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if haveSameQubit(q0, q1):
+                raise ValueError("Controlling bit and controlled bit "
+                                "should not be the same qubit.")
         qbsys = q0.system
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:
@@ -131,9 +138,13 @@ class _CCNOT(QubitsOperation):
         Controlled(X, q0 + q1, q2)
 
     def __call__(self, q0: Qubit, q1: Qubit, q2: Qubit) -> None:
-        if q0.system.id != q1.system.id or \
-                q0.system.id != q2.system.id:
-            raise ValueError("三个量子位处于不同的量子位系统")
+        if Options.inputCheck:
+            if not inSameSystem(q0, q1, q2):
+                raise ValueError("Three qubits are in different qubit system.")
+            if any(isControllingQubits(q0, q1, q2)):
+                raise ValueError("Controlled process operates controlling bit.")
+            if haveSameQubit(q0, q1, q2):
+                raise ValueError("CCNOT gate accept 3 different qubits.")
         qbsys = q0.system
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:

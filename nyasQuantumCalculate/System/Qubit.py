@@ -28,7 +28,7 @@ class Qubit:
             sys: 量子位所处的量子位系统
             idx: 量子位的索引, 应该从0开始到sys.nQubits-1"""
         if not 0 <= idx < qbsys.nQubits:
-            raise ValueError(f"索引为 {idx} 的量子位不存在")
+            raise ValueError(f"The qubit indexed {idx} does not exist.")
         self.system = qbsys
         self.index = idx
 
@@ -38,7 +38,7 @@ class Qubit:
     def __repr__(self) -> str:
         return f"Qubit({self.index} in system with id:{self.system.id})"
 
-    def __add__(self, other: "Qubit") -> Any:
+    def __add__(self, other: Any) -> Any:
         raise NotImplementedError
 
     def asQubits(self) -> Any:

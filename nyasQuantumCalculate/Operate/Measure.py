@@ -13,13 +13,13 @@ __all__ = ["M", "MA"]
 
 
 class _MEASURE(QubitsOperation):
-    """重置一个量子位
-
-    注意量子位只能重置振幅而不能重置相位, 如果可能的话
-    请使用位门偏转相位再重置量子位.
+    """测量一个量子位
 
     Args:
         qb: 需要重置的量子位
+
+    Returns:
+        如果测量为0返回False, 否则返回True
     """
 
     def __init__(self) -> None:
@@ -50,13 +50,13 @@ class _MEASURE(QubitsOperation):
 
 
 class _MEASUREALL(QubitsOperation):
-    """重置一个量子位
-
-    注意量子位只能重置振幅而不能重置相位, 如果可能的话
-    请使用位门偏转相位再重置量子位.
+    """测量多个量子位
 
     Args:
-        qbs: 需要重置的多个量子位
+        qbs: 需要重置的量子位
+
+    Returns:
+        bool列表, 如果测量为0返回False, 否则返回True
     """
 
     def __init__(self) -> None:

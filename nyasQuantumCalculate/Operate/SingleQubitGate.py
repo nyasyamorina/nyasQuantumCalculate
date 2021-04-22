@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 
@@ -10,7 +10,7 @@ from nyasQuantumCalculate.Utils import *
 from nyasQuantumCalculate.System import *
 
 
-__all__ = ["SingleQubitGate", "Rx", "Ry", "Rz", "R1", "Phase",
+__all__ = ["SingleQubitGate", "Rx", "Ry", "Rz", "R1", "Phase", "RotationGates",
            "I", "H", "X", "Y", "Z", "S", "T", "SR", "TR"]
 
 
@@ -18,8 +18,8 @@ class SingleQubitGate(QubitsOperation):
     """SingleQubitGate(complex, complex, complex, complex, str, **)
 
     单量子位门必须是酉矩阵, 初始化前可以使用`SingleQubitGate.checkUnitGate`
-    检查4个数字是否组成单量子位门. 输入参数`name`可以定义门的名字以方便跟踪, 并且
-    单量子位门的`controllable`应该为True (默认为False)
+    检查4个数字是否组成单量子位门. 输入参数`name`可以定义门的名字以方便跟踪. 并且
+    被作用单量子位门的量子位不能是控制位.
 
     Attributes:
         matrix: 单量子位门里的矩阵
@@ -32,7 +32,7 @@ class SingleQubitGate(QubitsOperation):
                  **kwargs: Any) -> None:
         if not kwargs.get("_notCheck", False) and \
                 not self.checkUnitGate(a, b, c, d):
-            raise ValueError("输入参数不能构造单量子位门")
+            raise ValueError("Input parameters cannot build a qubit gate.")
         super().__init__()
         self.name = name
         self.controllable = True
@@ -103,6 +103,8 @@ class SingleQubitGate(QubitsOperation):
 
     def __call__(self, qb: Qubit) -> None:
         qbsys = qb.system
+        if Options.inputCheck and qbsys.isControlling(qb.index):
+            raise ValueError("受控过程作用在控制位上")
         sysStopTrack = qbsys.stopTracking
         if qbsys.canTrack() and self.trackable:
             qbsys.addTrack(self.name, qb.index)
@@ -113,9 +115,10 @@ class SingleQubitGate(QubitsOperation):
 
     def __imul__(self, s: complex) -> "SingleQubitGate":
         if self._isBuiltin:
-            raise NotImplementedError("内建的门不可修改")
+            raise NotImplementedError("The built-in gate cannot be modified.")
         if not equal0(np.abs(s) - 1.):
-            raise ValueError("量子门乘数的模长必须等于1")
+            raise ValueError("The norm of the scalar multiplication"
+                             " must equal to 1.")
         self.matrix *= s
         return self
 
@@ -134,7 +137,7 @@ class SingleQubitGate(QubitsOperation):
 
     def __ipow__(self, n: complex) -> "SingleQubitGate":
         if self._isBuiltin:
-            raise NotImplementedError("内建的门不可修改")
+            raise NotImplementedError("The built-in gate cannot be modified.")
         v, Q = np.linalg.eig(self.matrix)
         self.matrix = Q @ np.diag(v ** n) @ np.linalg.inv(Q)
         return self
@@ -202,11 +205,48 @@ def Rz(theta: float) -> SingleQubitGate:
 
 
 def R1(theta: float) -> SingleQubitGate:
+    """|1❭相位旋转门, 实际上 R1(theta) = Phase(theta/2) @ Rz(theta)"""
     return SingleQubitGate(1., 0., 0., np.exp(1j * theta),
-                           _notCheck=True, name=f"Rx({theta:.4f})")
+                           _notCheck=True, name=f"R1({theta:.4f})")
 
 
 def Phase(theta: float) -> SingleQubitGate:
     ph = np.exp(1j * theta)
     return SingleQubitGate(ph, 0., 0., ph,
                            _notCheck=True, name=f"Ph({theta:.4f})")
+
+
+class RotationGates:
+    """RotationGates(x)
+
+    这个类不应该被初始化.
+
+    用于管理QFT和Add等地方使用的旋转门, 通过`Rs`和`iRs`的索引可以获取相应的门. 比如
+    `RotationGates.Rs[4]` 可以获取 `R1(2*pi/2**4)` 而`iRs`是`Rs`的逆门. 记得
+    在索引前使用`RotationGates.updateRs(int)`来确保门已被初始化.
+    """
+    Rs: List[SingleQubitGate] = list()
+    iRs: List[SingleQubitGate] = list()
+
+    @ staticmethod
+    def R(n: int) -> SingleQubitGate:
+        gate = R1(pi / (1 << (n - 1)))
+        gate.name = f"R_{n}"
+        return gate
+
+    @staticmethod
+    def iR(n: int) -> SingleQubitGate:
+        """iQFT里的相位门"""
+        gate = R1(-pi / (1 << (n - 1)))
+        gate.name = f"iR_{n}"
+        return gate
+
+    @classmethod
+    def updateRs(cls, n: int) -> None:
+        if n > len(cls.Rs):
+            cls.Rs += [cls.R(i) for i in range(len(cls.Rs) + 1, n + 1)]
+
+    @ classmethod
+    def updateiRs(cls, n: int) -> None:
+        if n > len(cls.iRs):
+            cls.iRs += [cls.iR(i) for i in range(len(cls.iRs) + 1, n + 1)]

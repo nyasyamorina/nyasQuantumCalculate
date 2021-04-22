@@ -6,3 +6,4 @@ ColorWheel.png
 __pycache__/
 test/
 *.bat
+nyasQuantumCalculate/HighLevel/Modular.py
