@@ -7,7 +7,7 @@ ColorWeel2RGB()
 TimeChunck
 """
 
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple, Union
 from time import time
 
 import numpy as np
@@ -16,7 +16,8 @@ from .Options import *
 
 
 __all__ = ["equal0", "sss", "delta", "ColorWheel2RGB", "TimeChunck",
-           "Bools2Int", "Int2Bools", "pi", "nBits"]
+           "Bools2Int", "Int2Bools", "pi", "nBits", "Bools2str01",
+           "gcd", "extended_gcd", "Frac2ContinuedFrac", "ContinuedFrac2Frac"]
 
 
 pi = np.pi
@@ -164,3 +165,58 @@ def nBits(x: int) -> int:
         x >>= 1
         n += 1
     return max(n, 1)
+
+
+def Bools2str01(bools: Iterable[Union[Literal[0, 1], bool]]) -> str:
+    """把bit列表表示为更好的二进制字符串
+
+    Args:
+        bools: bit列表
+
+    Returns:
+        0和1组成的字符串"""
+    return "".join(map(lambda x: '1' if x else '0', bools))
+
+
+gcd: Callable[[int, int], int] = lambda a, b: np.gcd(a, b)
+
+
+def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
+    """扩展欧几里得算法
+
+    求得满足 a*x + b*y = gcd(a,b) 的数字
+
+    Args:
+        a: 整数
+        b: 整数
+
+    Returns:
+        x, y, gcd(a,b) 组成的元组"""
+    old_r, r = a, b
+    old_s, s = 1, 0
+    old_t, t = 0, 1
+    while r != 0:
+        quotient = old_r // r
+        old_r, r = r, old_r - quotient * r
+        old_s, s = s, old_s - quotient * s
+        old_t, t = t, old_t - quotient * t
+    return old_s, old_t, old_r
+
+
+def Frac2ContinuedFrac(a: int, b: int) -> List[int]:
+    """普通分式化为连分式"""
+    result: List[int] = list()
+    while b >= 1:
+        c, t = divmod(a, b)
+        result.append(c)
+        a, b = b, t
+    return result
+
+
+def ContinuedFrac2Frac(fracs: List[int]) -> Tuple[int, int]:
+    """连分式化为普通分式"""
+    f = fracs.copy()
+    a, b = f.pop(), 1
+    while len(f) > 0:
+        a, b = a * f.pop() + b, a
+    return a, b

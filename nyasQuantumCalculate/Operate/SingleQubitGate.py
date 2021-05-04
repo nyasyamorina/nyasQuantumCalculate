@@ -139,7 +139,8 @@ class SingleQubitGate(QubitsOperation):
         if self._isBuiltin:
             raise NotImplementedError("The built-in gate cannot be modified.")
         v, Q = np.linalg.eig(self.matrix)
-        self.matrix = Q @ np.diag(v ** n) @ np.linalg.inv(Q)
+        self.matrix *= 0
+        self.matrix += Q @ np.diag(v ** n) @ np.linalg.inv(Q)
         return self
 
     def __pow__(self, n: complex) -> "SingleQubitGate":
