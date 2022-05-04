@@ -1,5 +1,9 @@
 # nyasQuantumCalculate
 一个简单的量子计算模拟库
+
+**这个库已经不再更新, 如果需要模拟量子计算的可以考虑[Qiskit](https://qiskit.org/). **
+**如果可以不使用python的话, 极力推荐专为量子计算打造的语言: [Q#](https://docs.microsoft.com/en-us/azure/quantum/user-guide/)**
+
 ```python
 from nyasQuantumCalculate import *
 
